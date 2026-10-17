@@ -1,0 +1,8 @@
+.local-image-env/
+.image-env/
+.python-runtime/
+models/
+__pycache__/
+.env
+logs/
+.vscode/
