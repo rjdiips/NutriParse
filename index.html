@@ -165,8 +165,9 @@ function setFields(name, calories, protein, carbs, fat){
 
 async function suggestNutrition(name, portion){
   const ctrl=new AbortController();
-  // LLM responses can occasionally take longer than 30 seconds.
-  const tid=setTimeout(()=>ctrl.abort(),60000);
+  // Local models may need to load before the first token; keep this above the
+  // server's 180-second local timeout.
+  const tid=setTimeout(()=>ctrl.abort(),200000);
   try{
     const resp=await fetch('/api/suggest', {
       method:'POST',

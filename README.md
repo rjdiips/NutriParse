@@ -61,6 +61,18 @@ cp .env.example .env
 
 3. Start `server.py` and use the web "Suggest with AI" button or CLI option 6.
 
+### Local models (no cloud calls)
+
+Set `LLM_PROVIDER=local` to send AI requests to any OpenAI-compatible server instead of OpenRouter:
+
+```env
+LLM_PROVIDER=local
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen3.5:9b
+```
+
+`LLM_BASE_URL` works with Ollama (`11434`), LM Studio (`1234`), and llama.cpp (`8080`). Local providers do not need an API key. `LLM_TIMEOUT` optionally overrides the request timeout in seconds (defaults: 30 for nutrition and 45 for recipes on OpenRouter, 180 for local models). Local requests disable thinking via `LLM_REASONING_EFFORT=none` and enable JSON mode through `response_format`, which keeps replies fast; set `LLM_REASONING_EFFORT=` empty or `LLM_JSON_MODE=false` if your server does not support them. Recipe images are unaffected and still use the local OpenVINO service.
+
 Each LLM request is recorded in `logs/llm.log`, including its request ID, model,
 food and portion, duration, and success or failure. Logs rotate automatically
 after reaching 2 MB, keeping up to five older files. API credentials and raw
