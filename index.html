@@ -6,123 +6,179 @@
 <title>Calorie Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@400..800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<div class="wrap">
-  <header class="site-header">
-    <div class="brand"><span class="brand-name">Calorie Tracker</span></div>
-    <div class="header-note">A little more mindful, every day.</div>
+<div class="a-page">
+  <header class="a-header">
+    <div class="a-header__meta"><span>Vol. I &mdash; A daily record</span><span id="headerDate"></span></div>
+    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">Calorie Tracker</div><span class="a-masthead__rule"></span></div>
+    <p class="a-tagline">A daily record of what nourishes you &mdash; kept gently, read often.</p>
   </header>
-  <div class="tabs" role="tablist">
-    <button id="tab-add" class="tab active" role="tab" aria-selected="true" aria-controls="panel-add" data-tab="add">Add Entry</button>
-    <button id="tab-entries" class="tab" role="tab" aria-selected="false" aria-controls="panel-entries" data-tab="entries">Recent Entries</button>
-    <button id="tab-summary" class="tab" role="tab" aria-selected="false" aria-controls="panel-summary" data-tab="summary">Daily Summary</button>
-    <button id="tab-goal" class="tab" role="tab" aria-selected="false" aria-controls="panel-goal" data-tab="goal">Goal</button>
-    <button id="tab-alchemist" class="tab" role="tab" aria-selected="false" aria-controls="panel-alchemist" data-tab="alchemist">Leftover Alchemist</button>
-  </div>
 
-  <div id="panel-add" class="section active" role="tabpanel" aria-labelledby="tab-add">
-    <div class="card">
-      <div class="row">
-        <div><label for="name">Food name</label><input id="name" autocomplete="name" /></div>
-        <div><label for="portion">Portion</label><input id="portion" placeholder="e.g. 1 slice, 100g, 250ml, 1 cup" autocomplete="off" /></div>
-      </div>
-      <div class="form-actions">
-        <button id="suggestBtn" class="pill">✨ Suggest with AI</button>
-        <span class="suggest-info-wrap">
-          <button type="button" class="suggest-info" aria-label="About AI suggestions" aria-describedby="suggestHelp">i</button>
-          <span class="suggest-help" id="suggestHelp" role="tooltip">Estimates calories, protein, carbs, and fat from the food name and portion.</span>
-        </span>
-      </div>
-      <div class="row row-spaced-lg">
-        <div><label for="calories">Calories</label><input id="calories" type="number" min="0" autocomplete="off" /></div>
-        <div><label for="protein">Protein (g)</label><input id="protein" type="number" min="0" autocomplete="off" /></div>
-        <div><label for="carbs">Carbs (g)</label><input id="carbs" type="number" min="0" autocomplete="off" /></div>
-        <div><label for="fat">Fat (g)</label><input id="fat" type="number" min="0" autocomplete="off" /></div>
-      </div>
-      <div class="row row-spaced">
-        <div class="flex-grow"><label for="meal">Meal</label>
-          <div class="meal-chips">
-            <button type="button" class="meal-chip active" aria-pressed="true" data-meal="breakfast" title="Breakfast"><span class="meal-emoji" aria-hidden="true">🍳</span><span>Breakfast</span></button>
-            <button type="button" class="meal-chip" aria-pressed="false" data-meal="lunch" title="Lunch"><span class="meal-emoji" aria-hidden="true">🥗</span><span>Lunch</span></button>
-            <button type="button" class="meal-chip" aria-pressed="false" data-meal="dinner" title="Dinner"><span class="meal-emoji" aria-hidden="true">🍽️</span><span>Dinner</span></button>
-            <button type="button" class="meal-chip" aria-pressed="false" data-meal="snack" title="Snack"><span class="meal-emoji" aria-hidden="true">🍎</span><span>Snack</span></button>
+  <nav class="a-nav" role="tablist" aria-label="Sections">
+    <button id="tab-summary" class="tab a-nav__item active" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary"><span class="a-nav__num">01</span>Today</button>
+    <button id="tab-add" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-add" data-tab="add"><span class="a-nav__num">02</span>Add Entry</button>
+    <button id="tab-entries" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-entries" data-tab="entries"><span class="a-nav__num">03</span>History</button>
+    <button id="tab-goal" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-goal" data-tab="goal"><span class="a-nav__num">04</span>Goal</button>
+    <button id="tab-alchemist" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-alchemist" data-tab="alchemist"><span class="a-nav__num">05</span>Alchemist</button>
+  </nav>
+
+  <main class="a-main">
+    <div id="panel-summary" class="section active" role="tabpanel" aria-labelledby="tab-summary">
+      <section class="a-lead">
+        <div class="a-lead__copy">
+          <span class="kicker">Today &middot; <span id="summaryDate"></span></span>
+          <h1 class="a-display">A day of<br /><em>small</em> decisions.</h1>
+          <p class="a-deck" id="todayDeck">Nothing logged yet. The page is open.</p>
+          <div class="a-progress">
+            <div class="a-progress__num"><strong id="todayCalories">0</strong><span>of <span id="todayGoal">2,000</span> calories</span></div>
+            <div class="a-progress__bar" role="progressbar" aria-label="Today's calorie goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="todayProgressBar" style="width:0%"></i></div>
+            <div class="a-progress__meta"><span id="todayPct">0% of daily target</span><span id="todayRemaining">2,000 left</span></div>
           </div>
         </div>
-        <div><label for="date">Date</label><input id="date" type="date" /></div>
-      </div>
-      <div class="form-actions">
-        <button id="addBtn" class="pill">Add Entry</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="panel-alchemist" class="section" role="tabpanel" aria-labelledby="tab-alchemist">
-    <div class="card alchemist-intro">
-      <div class="alchemist-kicker">THE FRIDGE IS YOUR LABORATORY</div>
-      <h2>Leftover Alchemist</h2>
-      <p class="muted">Name your ingredients. I’ll turn them into something less mysterious than “bits in a bowl.”</p>
-      <label for="alchemistIngredients">What have you got?</label>
-      <textarea id="alchemistIngredients" maxlength="500" placeholder="e.g. cooked rice, eggs, half a bell pepper, spinach"></textarea>
-      <label for="alchemistUseSoon">Anything to use soon? <span class="muted normal-case">(optional)</span></label>
-      <input id="alchemistUseSoon" maxlength="500" placeholder="e.g. spinach is looking dramatic" />
-      <div class="form-actions"><button id="conjureBtn" class="pill">🧪 Conjure recipes</button></div>
-      <p id="alchemistStatus" class="muted" role="status" aria-live="polite">Enter a few ingredients to get started.</p>
-    </div>
-    <div id="recipeResults" class="recipe-grid" aria-live="polite"></div>
-  </div>
-
-  <div id="panel-entries" class="section" role="tabpanel" aria-labelledby="tab-entries">
-    <div class="card">
-      <div id="entriesView">
-        <div class="search-wrap"><span class="search-icon" aria-hidden="true">🔎</span><input id="entriesSearch" placeholder="Search entries..." /></div>
-        <table><thead><tr><th>Date</th><th>Meal</th><th>Name</th><th>Cal</th><th>P/C/F</th><th class="actions-column">Actions</th></tr></thead><tbody id="entryBody"></tbody></table>
-        <div id="emptyState" class="empty-state">
-          <div class="empty-disc"><span class="empty-emoji" aria-hidden="true">🍽️</span></div>
-          <div class="empty-title">No entries yet</div>
-          <div class="muted">Log your first meal to get started.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="panel-summary" class="section" role="tabpanel" aria-labelledby="tab-summary">
-    <div class="card summary-card">
-      <div class="summary-heading"><h2>Today’s nutrition</h2><div class="summary-date" id="summaryDate"></div></div>
-      <div class="summary-calories"><strong id="todayCalories">0</strong><span>calories eaten</span></div>
-      <div class="summary-meta"><span id="todayEntryCount">0 meals logged today</span></div>
-      <div class="summary-macros" aria-label="Today's macronutrients">
-        <div class="macro-card"><span>Protein</span><strong id="todayProtein">0</strong><small>g</small></div>
-        <div class="macro-card"><span>Carbs</span><strong id="todayCarbs">0</strong><small>g</small></div>
-        <div class="macro-card"><span>Fat</span><strong id="todayFat">0</strong><small>g</small></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="panel-goal" class="section" role="tabpanel" aria-labelledby="tab-goal">
-    <div class="card goal-card">
-      <div class="goal-intro"><h2>Your daily goal</h2><p class="muted">A steady target helps you keep track of your day.</p></div>
-      <div class="goal-layout">
-        <div class="goal-progress">
-          <div class="ring">
-            <svg viewBox="0 0 100 100" aria-label="Today's calorie goal progress"><circle class="ring-bg" cx="50" cy="50" r="44"/><circle id="goalRing" class="ring-progress" cx="50" cy="50" r="44" stroke-dasharray="276.46" stroke-dashoffset="276.46" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" /></svg>
-            <div class="ring-center"><strong id="goalRingPct">0%</strong><span>of daily goal</span></div>
+        <div class="a-lead__plate">
+          <div class="macro-plate" id="macroPlate" role="img" aria-label="Today's macro split">
+            <div class="macro-plate__ring is-empty" id="macroPlateRing">
+              <div class="macro-plate__center">
+                <strong id="macroPlateCalories">0</strong>
+                <span>kcal today</span>
+              </div>
+            </div>
+            <span class="macro-plate__tag">The day, plated</span>
           </div>
-          <div class="goal-today"><div id="goalTodayCalories">0 of 2,000 calories</div><span id="goalRemaining">2,000 calories remaining today</span></div>
-        </div>
-        <div class="goal-editor">
-          <h3>Adjust your target</h3>
-          <div class="goal-row">
-            <div class="goal-input-field"><label for="goalInput">Daily calorie goal</label><input id="goalInput" type="number" min="1" /></div>
-            <button id="saveGoal">Save goal</button>
+          <div class="a-facts">
+            <div class="a-fact a-fact--protein"><span>Protein</span><strong><span id="todayProtein">0</span><small>g</small></strong></div>
+            <div class="a-fact a-fact--carbs"><span>Carbs</span><strong><span id="todayCarbs">0</span><small>g</small></strong></div>
+            <div class="a-fact a-fact--fat"><span>Fat</span><strong><span id="todayFat">0</span><small>g</small></strong></div>
           </div>
-          <p class="muted" id="goalStatus" aria-live="polite"></p>
         </div>
-      </div>
+      </section>
+
+      <section class="a-section">
+        <div class="a-section__head"><span class="kicker">The day&rsquo;s menu</span><span class="a-section__note" id="todayMenuNote">0 entries &middot; 0 kcal</span></div>
+        <div id="todayMenu"></div>
+      </section>
+
+      <section class="a-target">
+        <div><span class="kicker">The daily target</span>
+          <div class="a-target__line"><strong id="todayTarget">2,000</strong><span id="todayTargetNote">calories &middot; 0% used</span></div>
+        </div>
+        <button type="button" class="btn-line" data-tab="goal">Adjust the target &rarr;</button>
+      </section>
     </div>
-  </div>
+
+    <div id="panel-add" class="section" role="tabpanel" aria-labelledby="tab-add">
+      <section class="a-log">
+        <div class="a-log__intro">
+          <span class="kicker">Add to the record</span>
+          <h1 class="a-display">What did<br /><em>you</em> eat?</h1>
+          <p class="a-deck">A few honest numbers are enough. Estimates are welcome; precision is not the point.</p>
+          <div class="a-log__note"><span class="kicker">A note</span>
+            <p>Log the thing you actually ate, not the thing you meant to. The record is more useful that way.</p>
+          </div>
+        </div>
+
+        <form class="a-form" id="entryForm" autocomplete="off" novalidate>
+          <div class="a-form__grid">
+            <label class="field field--full" for="name"><span>Food name</span><input id="name" autocomplete="name" placeholder="e.g. Oat &amp; pear porridge" /></label>
+            <label class="field field--full" for="portion"><span>Portion</span><input id="portion" placeholder="e.g. 1 slice, 100g, 250ml, 1 cup" autocomplete="off" /></label>
+            <label class="field" for="calories"><span>Calories</span><input id="calories" type="number" min="0" autocomplete="off" placeholder="0" /></label>
+            <label class="field" for="protein"><span>Protein (g)</span><input id="protein" type="number" min="0" autocomplete="off" placeholder="0" /></label>
+            <label class="field" for="carbs"><span>Carbs (g)</span><input id="carbs" type="number" min="0" autocomplete="off" placeholder="0" /></label>
+            <label class="field" for="fat"><span>Fat (g)</span><input id="fat" type="number" min="0" autocomplete="off" placeholder="0" /></label>
+            <div class="field field--full"><span>Meal</span>
+              <div class="a-meals" role="group" aria-label="Meal">
+                <button type="button" class="meal-chip active" aria-pressed="true" data-meal="breakfast" title="Breakfast"><span class="meal-emoji" aria-hidden="true">🍳</span><span>Breakfast</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="lunch" title="Lunch"><span class="meal-emoji" aria-hidden="true">🥗</span><span>Lunch</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="dinner" title="Dinner"><span class="meal-emoji" aria-hidden="true">🍽️</span><span>Dinner</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="snack" title="Snack"><span class="meal-emoji" aria-hidden="true">🍎</span><span>Snack</span></button>
+              </div>
+            </div>
+            <label class="field field--full" for="date"><span>Date</span><input id="date" type="date" /></label>
+          </div>
+          <div class="a-form__foot">
+            <button type="button" id="addBtn" class="btn-ink">Add entry</button>
+            <button type="button" id="suggestBtn" class="btn-line">✨ Suggest with AI</button>
+            <span class="suggest-info-wrap">
+              <button type="button" class="suggest-info" aria-label="About AI suggestions" aria-describedby="suggestHelp">i</button>
+              <span class="suggest-help" id="suggestHelp" role="tooltip">Estimates calories, protein, carbs, and fat from the food name and portion.</span>
+            </span>
+            <span class="a-form__hint">A little precision, gently kept.</span>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="panel-entries" class="section" role="tabpanel" aria-labelledby="tab-entries">
+      <section class="a-journal">
+        <div class="a-journal__head">
+          <div><span class="kicker">The archive</span><h1 class="a-display">Everything,<br /><em>in order.</em></h1></div>
+          <div class="a-search"><span class="a-search__icon" aria-hidden="true">&#9906;</span>
+            <input id="entriesSearch" type="search" placeholder="Search the record..." aria-label="Search entries" />
+          </div>
+        </div>
+        <div id="entryBody" class="a-days"></div>
+        <div id="emptyState" class="a-empty-state">
+          <span class="kicker">No entries yet</span>
+          <p>Log your first meal to begin the record.</p>
+          <button type="button" class="btn-line" data-tab="add">Add an entry &rarr;</button>
+        </div>
+        <p id="noResults" class="a-empty" hidden>No entries match that search.</p>
+      </section>
+    </div>
+
+    <div id="panel-goal" class="section" role="tabpanel" aria-labelledby="tab-goal">
+      <section class="a-goal">
+        <div class="a-goal__main">
+          <span class="kicker">The daily allowance</span>
+          <h1 class="a-display">A target,<br /><em>not a verdict.</em></h1>
+          <p class="a-deck">A steady number to steer by. Adjust it when your days change; the record will follow.</p>
+          <div class="a-goal__figure"><strong id="goalFigure">2,000</strong><span>calories a day</span></div>
+          <div class="a-progress__bar a-goal__bar" role="progressbar" aria-label="Today's calorie goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="goalProgressBar" style="width:0%"></i></div>
+          <div class="a-progress__meta"><span id="goalTodayCalories">0 eaten today</span><span id="goalRemaining">2,000 remaining</span></div>
+        </div>
+        <aside class="a-goal__editor">
+          <span class="kicker">Adjust the target</span>
+          <label class="field" for="goalInput" style="margin-top:18px"><span>Daily calorie goal</span><input id="goalInput" type="number" min="1" /></label>
+          <div class="a-presets">
+            <button type="button" data-goal-preset="1800">1,800</button>
+            <button type="button" data-goal-preset="2000">2,000</button>
+            <button type="button" data-goal-preset="2200">2,200</button>
+          </div>
+          <button id="saveGoal" class="btn-ink" type="button">Save the target</button>
+          <p class="a-editor-note" id="goalStatus" aria-live="polite"></p>
+        </aside>
+      </section>
+    </div>
+
+    <div id="panel-alchemist" class="section" role="tabpanel" aria-labelledby="tab-alchemist">
+      <section class="a-alch">
+        <div class="a-alch__grid">
+          <div>
+            <span class="kicker">The fridge is a laboratory</span>
+            <h1 class="a-display">Leftover<br /><em>alchemist.</em></h1>
+            <p class="a-deck">Name your ingredients. I&rsquo;ll turn them into something less mysterious than &ldquo;bits in a bowl.&rdquo;</p>
+          </div>
+          <div class="a-alch__panel">
+            <label class="field" for="alchemistIngredients"><span>What have you got?</span><textarea id="alchemistIngredients" maxlength="500" placeholder="e.g. cooked rice, eggs, half a bell pepper, spinach"></textarea></label>
+            <label class="field" for="alchemistUseSoon"><span>Anything to use soon? <i>(optional)</i></span><input id="alchemistUseSoon" maxlength="500" placeholder="e.g. spinach is looking dramatic" /></label>
+            <div class="a-alch__actions">
+              <button id="conjureBtn" class="btn-ink" type="button">Conjure recipes</button>
+              <span id="alchemistStatus" class="a-status" role="status" aria-live="polite">Enter a few ingredients to get started.</span>
+            </div>
+          </div>
+        </div>
+        <div class="a-alch__results">
+          <div class="a-section__head"><span class="kicker">Three ideas</span><span class="a-section__note">Per serving, approximate</span></div>
+          <div id="recipeResults" class="recipe-grid" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>Calorie Tracker &middot; A daily record</span></footer>
 </div>
 
 <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
@@ -141,19 +197,37 @@ function localDateString(date=new Date()){
   return `${year}-${month}-${day}`;
 }
 function today(){ return localDateString(); }
+function parseISO(iso){ return new Date(iso+'T12:00:00'); }
+function fmt(n){ return new Intl.NumberFormat('en-US').format(Math.round(Number(n)||0)); }
+function fmt1(n){ return String(Math.round((Number(n)||0)*10)/10); }
+function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function longDate(iso){ return new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(parseISO(iso)); }
+function dayNum(iso){ return String(parseISO(iso).getDate()).padStart(2,'0'); }
+function monthShort(iso){ return new Intl.DateTimeFormat(undefined,{month:'short'}).format(parseISO(iso)); }
+function weekdayLong(iso){ return new Intl.DateTimeFormat(undefined,{weekday:'long'}).format(parseISO(iso)); }
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return localDateString(d); }
+function dayLabel(iso){
+  if(iso===today()) return 'Today';
+  if(iso===addDays(-1)) return 'Yesterday';
+  return weekdayLong(iso);
+}
 
 document.getElementById('date').value=today();
 document.getElementById('goalInput').value=data.calorie_goal;
-document.getElementById('goalStatus').textContent='Current daily calorie goal: '+data.calorie_goal;
+document.getElementById('headerDate').textContent=longDate(today());
 
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+function activateTab(name){
+  const active=document.querySelector('.tab[data-tab="'+name+'"]');
+  if(!active) return;
   document.querySelectorAll('.tab').forEach(x=>{x.classList.remove('active'); x.setAttribute('aria-selected','false');});
   document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
-  t.classList.add('active'); t.setAttribute('aria-selected','true');
-  document.getElementById('panel-'+t.dataset.tab).classList.add('active');
-  document.title='Calorie Tracker — '+t.textContent.trim();
+  active.classList.add('active'); active.setAttribute('aria-selected','true');
+  document.getElementById('panel-'+name).classList.add('active');
+  document.title='Calorie Tracker — '+active.textContent.trim().replace(/^\d{2}/,'');
   render();
-}));
+}
+
+document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>activateTab(el.dataset.tab)));
 
 function setFields(name, calories, protein, carbs, fat){
   document.getElementById('name').value=name;
@@ -165,8 +239,6 @@ function setFields(name, calories, protein, carbs, fat){
 
 async function suggestNutrition(name, portion){
   const ctrl=new AbortController();
-  // Local models may need to load before the first token; keep this above the
-  // server's 180-second local timeout.
   const tid=setTimeout(()=>ctrl.abort(),200000);
   try{
     const resp=await fetch('/api/suggest', {
@@ -215,56 +287,147 @@ function addText(parent, tag, text, className=''){
   parent.appendChild(el); return el;
 }
 
+function recipePlate(index){
+  const plate=document.createElement('div');
+  plate.className='plate plate--'+['green','amber','rose'][index%3];
+  plate.setAttribute('role','img');
+  plate.setAttribute('aria-label','Illustrated plate study for recipe '+(index+1));
+  addText(plate,'span','Plate study '+String(index+1).padStart(2,'0'),'plate__tag');
+  return plate;
+}
+
 function renderRecipes(recipes){
   const results=document.getElementById('recipeResults');
   results.replaceChildren();
   const imageJobs=[];
-  recipes.forEach(recipe=>{
+  recipes.forEach((recipe,index)=>{
     const card=document.createElement('article'); card.className='recipe-card';
+
+    const media=document.createElement('div'); media.className='recipe-media';
     if(recipe.image){
       const image=document.createElement('img');
       image.className='recipe-image'; image.src=recipe.image; image.alt='AI generated image of '+recipe.title;
-      image.loading='lazy'; card.appendChild(image);
+      image.loading='lazy'; media.appendChild(image);
     }else if(recipe.image_pending){
-      const placeholder=addText(card,'p','Painting this dish...','recipe-image-fallback');
-      imageJobs.push({recipe,card,placeholder});
-    }else if(recipe.image_unavailable){
-      addText(card,'p','The image spirit is resting; recipe details are ready.','recipe-image-fallback');
+      const frame=document.createElement('div');
+      frame.className='recipe-image-frame';
+      frame.setAttribute('role','img');
+      frame.setAttribute('aria-label','Recipe photo is developing');
+      const haze=document.createElement('div');
+      haze.className='recipe-image-haze'; haze.setAttribute('aria-hidden','true');
+      frame.appendChild(haze);
+      const loading=document.createElement('div');
+      loading.className='recipe-image-loading'; loading.setAttribute('aria-hidden','true');
+      addText(loading,'span','','recipe-loading-ring');
+      addText(loading,'span','Developing image');
+      frame.appendChild(loading);
+      media.appendChild(frame);
+      imageJobs.push({recipe,frame,index});
+    }else{
+      media.appendChild(recipePlate(index));
     }
-    addText(card,'h3',recipe.title,'recipe-title');
-    addText(card,'p',recipe.description,'recipe-description');
-    addText(card,'p','Uses: '+(recipe.ingredients_used||[]).join(', '),'recipe-ingredient-line');
-    if(recipe.pantry_extras?.length) addText(card,'p','Pantry extras: '+recipe.pantry_extras.join(', '),'recipe-ingredient-line');
-    addText(card,'div','For '+recipe.servings+' '+(recipe.servings===1?'serving':'servings'),'recipe-servings');
+    card.appendChild(media);
+
+    const body=document.createElement('div'); body.className='recipe-body';
+    const topline=document.createElement('div'); topline.className='recipe-topline';
+    const kicker=addText(topline,'span','Recipe '+String(index+1).padStart(2,'0'),'recipe-kicker');
+    kicker.setAttribute('aria-hidden','true');
+    addText(topline,'span','Serves '+recipe.servings,'recipe-serving');
+    body.appendChild(topline);
+    addText(body,'h3',recipe.title,'recipe-title');
+    addText(body,'p',recipe.description,'recipe-description');
+
+    const uses=document.createElement('p'); uses.className='recipe-ingredient-line';
+    addText(uses,'strong','Uses');
+    uses.appendChild(document.createTextNode(' '+(recipe.ingredients_used||[]).join(', ')));
+    body.appendChild(uses);
+
+    if(recipe.pantry_extras?.length){
+      const pantry=document.createElement('p'); pantry.className='recipe-ingredient-line';
+      addText(pantry,'strong','Pantry');
+      pantry.appendChild(document.createTextNode(' '+recipe.pantry_extras.join(', ')));
+      body.appendChild(pantry);
+    }
+
+    const detail=document.createElement('div'); detail.className='recipe-detail';
     const list=document.createElement('ol'); list.className='recipe-steps';
-    recipe.steps.forEach(step=>addText(list,'li',step)); card.appendChild(list);
+    recipe.steps.forEach(step=>addText(list,'li',step));
+    detail.appendChild(list);
+
     const n=recipe.nutrition;
     const nutrition=document.createElement('div'); nutrition.className='recipe-nutrition';
-    addText(nutrition,'strong',Math.round(n.calories)+' cal','recipe-calories');
-    addText(nutrition,'span','P '+Math.round(n.protein)+'g · C '+Math.round(n.carbs)+'g · F '+Math.round(n.fat)+'g','recipe-macros');
-    card.appendChild(nutrition);
-    addText(card,'p','Approximate nutrition per serving.','recipe-footnote');
-    const btn=addText(card,'button','Add to tracker','recipe-add'); btn.type='button';
+    addText(nutrition,'span','Per serving, approximate','recipe-nutrition-label');
+    const facts=document.createElement('div'); facts.className='recipe-facts';
+    const fact=(value,label)=>{
+      const item=document.createElement('div');
+      addText(item,'strong',value);
+      addText(item,'span',label);
+      facts.appendChild(item);
+    };
+    fact(Math.round(n.calories)+'', 'kcal');
+    fact(Math.round(n.protein)+'g', 'protein');
+    fact(Math.round(n.carbs)+'g', 'carbs');
+    fact(Math.round(n.fat)+'g', 'fat');
+    nutrition.appendChild(facts);
+    detail.appendChild(nutrition);
+    body.appendChild(detail);
+
+    const footer=document.createElement('div'); footer.className='recipe-footer';
+    const btn=addText(footer,'button','Add to tracker →','recipe-add'); btn.type='button';
     btn.addEventListener('click',()=>{
       setFields(recipe.title,n.calories,n.protein,n.carbs,n.fat);
       document.getElementById('portion').value='1 serving';
-      document.querySelector('[data-tab="add"]').click();
+      activateTab('add');
       document.getElementById('name').focus();
       toast('Recipe added to the entry form for review.','success');
     });
+    body.appendChild(footer);
+    card.appendChild(body);
     results.appendChild(card);
   });
-  imageJobs.forEach(async ({recipe,card,placeholder})=>{
+  imageJobs.forEach(async ({recipe,frame,index})=>{
     try{
       const result=await conjureRecipeImage(recipe);
       const image=document.createElement('img');
       image.className='recipe-image'; image.src=result.image; image.alt='AI generated image of '+recipe.title;
       image.loading='lazy';
-      placeholder.replaceWith(image);
+      frame.appendChild(image);
+      if(image.decode){ try{ await image.decode(); }catch(_){} }
+      frame.removeAttribute('role');
+      frame.removeAttribute('aria-label');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>frame.classList.add('is-ready')));
     }catch(_){
-      placeholder.textContent='The image spirit is resting; recipe details are ready.';
+      frame.replaceWith(recipePlate(index));
     }
   });
+}
+
+function glideTo(target,duration=1200){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ target.scrollIntoView({block:'start'}); return; }
+  const startY=window.scrollY;
+  const margin=parseFloat(getComputedStyle(target).scrollMarginTop)||0;
+  const endY=Math.max(0,startY+target.getBoundingClientRect().top-margin);
+  const distance=endY-startY;
+  if(Math.abs(distance)<2) return;
+  const startTime=performance.now();
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  let cancelled=false;
+  const clean=()=>{
+    window.removeEventListener('wheel',stop);
+    window.removeEventListener('touchstart',stop);
+    window.removeEventListener('keydown',stop);
+  };
+  const stop=()=>{ cancelled=true; clean(); };
+  window.addEventListener('wheel',stop,{passive:true});
+  window.addEventListener('touchstart',stop,{passive:true});
+  window.addEventListener('keydown',stop);
+  const step=now=>{
+    if(cancelled) return;
+    const t=Math.min(1,(now-startTime)/duration);
+    window.scrollTo(0,startY+distance*ease(t));
+    if(t<1) requestAnimationFrame(step); else clean();
+  };
+  requestAnimationFrame(step);
 }
 
 document.getElementById('conjureBtn').addEventListener('click',async()=>{
@@ -281,12 +444,13 @@ document.getElementById('conjureBtn').addEventListener('click',async()=>{
     const result=await conjureRecipes(ingredients,useSoon);
     if(!Array.isArray(result.recipes)||result.recipes.length!==3) throw new Error('The Alchemist returned an incomplete set. Please try again.');
     renderRecipes(result.recipes);
+    glideTo(results);
     status.textContent=result.recipes.some(recipe=>recipe.image_pending)
       ? 'Three ideas, freshly conjured. Images are painting in the background; nutrition is an estimate.'
       : 'Three ideas, freshly conjured. Nutrition is an estimate.';
   }catch(e){
     status.textContent=e.name==='AbortError'?'The cauldron timed out. Try again in a moment.':'The conjuring failed: '+e.message;
-  }finally{ btn.disabled=false; btn.textContent='🧪 Conjure recipes'; }
+  }finally{ btn.disabled=false; btn.textContent='Conjure recipes'; }
 });
 
 function toast(msg,kind='success'){
@@ -314,6 +478,11 @@ document.getElementById('suggestBtn').addEventListener('click', async ()=>{
   }finally{
     btn.classList.remove('loading'); btn.textContent='✨ Suggest with AI';
   }
+});
+
+document.getElementById('entryForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  document.getElementById('addBtn').click();
 });
 
 document.getElementById('addBtn').addEventListener('click',()=>{
@@ -355,72 +524,182 @@ function totalsForDate(entries, d){
   return {calories:day.reduce((s,e)=>s+e.calories,0), protein:day.reduce((s,e)=>s+e.protein,0), carbs:day.reduce((s,e)=>s+e.carbs,0), fat:day.reduce((s,e)=>s+e.fat,0), count:day.length};
 }
 
-function renderEntries(){
-  const body=document.getElementById('entryBody');
-  const table=document.querySelector('#panel-entries table');
-  const empty=document.getElementById('emptyState');
-  const search=document.getElementById('entriesSearch')?.value.toLowerCase()||'';
-  body.innerHTML='';
-  const sorted=[...data.entries].filter(e=>e.name.toLowerCase().includes(search)||e.meal.toLowerCase().includes(search)).sort((a,b)=>b.date.localeCompare(a.date));
-  if(sorted.length===0){ table.classList.add('is-hidden'); empty.classList.add('is-visible'); return; }
-  table.classList.remove('is-hidden'); empty.classList.remove('is-visible');
-  sorted.slice(0,20).forEach(e=>{
-    const tr=document.createElement('tr');
-    tr.className='entry-row';
-    tr.innerHTML=`<td>${e.date}</td><td>${e.meal}</td><td>${e.name}</td><td>${e.calories.toFixed(0)}</td><td>P${e.protein.toFixed(0)} C${e.carbs.toFixed(0)} F${e.fat.toFixed(0)}</td><td><button class="btn-edit" data-id="${e.id}" title="Edit ${e.name}">Edit</button> <button class="danger" data-id="${e.id}" aria-label="Delete ${e.name} (${e.date})">🗑️ Del</button></td>`;
-    body.appendChild(tr);
-  });
-  body.querySelectorAll('button.danger').forEach(b=>b.addEventListener('click',()=>{
-    const id=parseInt(b.dataset.id);
-    const entry=data.entries.find(e=>e.id===id);
-    if(!confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
-    data.entries=data.entries.filter(e=>e.id!==id);
-    save(data); render();
-  }));
-  body.querySelectorAll('.btn-edit').forEach(b=>b.addEventListener('click',()=>{
-    const id=parseInt(b.dataset.id);
-    const entry=data.entries.find(e=>e.id===id);
-    if(!entry) return;
-    document.getElementById('name').value=entry.name;
-    document.getElementById('portion').value='';
-    document.getElementById('calories').value=entry.calories;
-    document.getElementById('protein').value=entry.protein;
-    document.getElementById('carbs').value=entry.carbs;
-    document.getElementById('fat').value=entry.fat;
-    document.getElementById('date').value=entry.date;
-    document.querySelectorAll('.meal-chip').forEach(c=>{c.classList.toggle('active', c===document.querySelector('.meal-chip[data-meal="'+entry.meal+'"]')); c.setAttribute('aria-pressed', c.dataset.meal===entry.meal);});
-    document.querySelector('.meal-chip[data-meal="'+entry.meal+'"]').classList.add('active');
-    document.querySelector('.meal-chip[data-meal="'+entry.meal+'"]').setAttribute('aria-pressed','true');
-    clearInlineErrors();
-    document.querySelector('[data-tab="add"]').click();
-  }));
+function groupedEntries(search){
+  const q=(search||'').trim().toLowerCase();
+  const map=new Map();
+  data.entries
+    .filter(e=>!q || e.name.toLowerCase().includes(q) || e.meal.toLowerCase().includes(q))
+    .forEach(e=>{
+      if(!map.has(e.date)) map.set(e.date, []);
+      map.get(e.date).push(e);
+    });
+  return Array.from(map.entries())
+    .sort((a,b)=>b[0].localeCompare(a[0]))
+    .map(([date, entries])=>{
+      const total=entries.reduce((t,e)=>({calories:t.calories+e.calories,count:t.count+1}),{calories:0,count:0});
+      return {date, entries, total};
+    });
 }
 
-document.getElementById('entriesSearch')?.addEventListener('input', render);
+function entryRow(e, withTools){
+  const row=document.createElement('div');
+  row.className='a-row'+(withTools?'':' a-row--plain');
+  row.dataset.id=e.id;
+  addText(row,'span',cap(e.meal),'a-row__meal');
+  const main=document.createElement('div'); main.className='a-row__main';
+  addText(main,'span',e.name,'a-row__name');
+  addText(main,'span',`P ${fmt1(e.protein)} · C ${fmt1(e.carbs)} · F ${fmt1(e.fat)}`,'a-row__macros');
+  row.appendChild(main);
+  const cal=document.createElement('span'); cal.className='a-row__cal';
+  cal.appendChild(document.createTextNode(Math.round(e.calories)+''));
+  addText(cal,'small','kcal');
+  row.appendChild(cal);
+  if(withTools){
+    const tools=document.createElement('span'); tools.className='a-row__tools';
+    const edit=addText(tools,'button','Edit','text-btn'); edit.type='button';
+    edit.addEventListener('click',()=>editEntry(e.id));
+    const del=addText(tools,'button','Delete','text-btn text-btn--danger'); del.type='button';
+    del.addEventListener('click',()=>deleteEntry(e.id));
+    row.appendChild(tools);
+  }
+  return row;
+}
+
+function editEntry(id){
+  const entry=data.entries.find(e=>e.id===id);
+  if(!entry) return;
+  document.getElementById('name').value=entry.name;
+  document.getElementById('portion').value='';
+  document.getElementById('calories').value=entry.calories;
+  document.getElementById('protein').value=entry.protein;
+  document.getElementById('carbs').value=entry.carbs;
+  document.getElementById('fat').value=entry.fat;
+  document.getElementById('date').value=entry.date;
+  document.querySelectorAll('.meal-chip').forEach(c=>{
+    const on=c.dataset.meal===entry.meal;
+    c.classList.toggle('active',on);
+    c.setAttribute('aria-pressed',on);
+  });
+  clearInlineErrors();
+  activateTab('add');
+}
+
+function deleteEntry(id){
+  const entry=data.entries.find(e=>e.id===id);
+  if(!entry) return;
+  if(!confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
+  data.entries=data.entries.filter(e=>e.id!==id);
+  save(data); render();
+}
+
+function renderEntries(){
+  const body=document.getElementById('entryBody');
+  const empty=document.getElementById('emptyState');
+  const noResults=document.getElementById('noResults');
+  const search=document.getElementById('entriesSearch')?.value||'';
+  body.replaceChildren();
+  if(data.entries.length===0){
+    empty.classList.add('is-visible');
+    noResults.hidden=true;
+    return;
+  }
+  empty.classList.remove('is-visible');
+  const groups=groupedEntries(search);
+  if(groups.length===0){ noResults.hidden=false; return; }
+  noResults.hidden=true;
+  groups.forEach(g=>{
+    const section=document.createElement('section'); section.className='a-day';
+    const head=document.createElement('header'); head.className='a-day__head';
+    const date=document.createElement('div'); date.className='a-day__date';
+    addText(date,'strong',dayNum(g.date));
+    addText(date,'span',`${monthShort(g.date)} · ${dayLabel(g.date)}`);
+    head.appendChild(date);
+    addText(head,'span',`${g.entries.length} ${g.entries.length===1?'entry':'entries'} · ${fmt(g.total.calories)} kcal`,'a-day__total');
+    section.appendChild(head);
+    g.entries.forEach(e=>section.appendChild(entryRow(e,true)));
+    body.appendChild(section);
+  });
+}
+
+document.getElementById('entriesSearch')?.addEventListener('input', renderEntries);
+
+function renderTodayMenu(t){
+  const wrap=document.getElementById('todayMenu');
+  wrap.replaceChildren();
+  const entries=data.entries.filter(e=>e.date===today());
+  if(entries.length===0){
+    addText(wrap,'p','Nothing logged yet. Even a handful of almonds counts.','a-empty');
+  }else{
+    entries.forEach(e=>wrap.appendChild(entryRow(e,false)));
+  }
+  document.getElementById('todayMenuNote').textContent=`${t.count} ${t.count===1?'entry':'entries'} · ${fmt(t.calories)} kcal`;
+}
+
+function renderMacroPlate(t){
+  const proteinCal=t.protein*4;
+  const carbsCal=t.carbs*4;
+  const fatCal=t.fat*9;
+  const total=proteinCal+carbsCal+fatCal;
+  const ring=document.getElementById('macroPlateRing');
+  const plate=document.getElementById('macroPlate');
+  if(total>0){
+    const proteinPct=(proteinCal/total)*100;
+    const carbsPct=(carbsCal/total)*100;
+    const fatPct=Math.max(0,100-proteinPct-carbsPct);
+    ring.style.background=`conic-gradient(var(--macro-protein) 0 ${proteinPct}%, var(--macro-carbs) ${proteinPct}% ${proteinPct+carbsPct}%, var(--macro-fat) ${proteinPct+carbsPct}% 100%)`;
+    ring.classList.remove('is-empty');
+    plate.setAttribute('aria-label',`Today's macro split: ${Math.round(proteinPct)}% protein, ${Math.round(carbsPct)}% carbs, ${Math.round(fatPct)}% fat. ${fmt(t.calories)} calories logged.`);
+  }else{
+    ring.style.background='';
+    ring.classList.add('is-empty');
+    plate.setAttribute('aria-label',`No macros logged today. ${fmt(t.calories)} calories logged.`);
+  }
+  document.getElementById('macroPlateCalories').textContent=fmt(t.calories);
+}
 
 function renderSummary(){
   const tt=totalsForDate(data.entries,today());
-  document.getElementById('summaryDate').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date());
-  document.getElementById('todayCalories').textContent=tt.calories.toFixed(0);
-  document.getElementById('todayEntryCount').textContent=`${tt.count} ${tt.count===1?'meal':'meals'} logged today`;
-  document.getElementById('todayProtein').textContent=tt.protein.toFixed(0);
-  document.getElementById('todayCarbs').textContent=tt.carbs.toFixed(0);
-  document.getElementById('todayFat').textContent=tt.fat.toFixed(0);
+  const goal=data.calorie_goal;
+  const pct=goal>0?Math.min(100,(tt.calories/goal)*100):0;
+  const remaining=goal-tt.calories;
+  const dateText=longDate(today());
+  document.getElementById('headerDate').textContent=dateText;
+  document.getElementById('summaryDate').textContent=dateText;
+  document.getElementById('todayCalories').textContent=fmt(tt.calories);
+  document.getElementById('todayGoal').textContent=fmt(goal);
+  document.getElementById('todayDeck').textContent=tt.count===0
+    ? 'Nothing logged yet. The page is open — add the first thing you actually ate.'
+    : `${tt.count} ${tt.count===1?'meal':'meals'} logged, ${fmt(tt.calories)} calories. ` +
+      (remaining>0
+        ? `There is room left for something good — ${fmt(remaining)} calories of it.`
+        : `You are ${fmt(Math.abs(remaining))} over today’s target. Tomorrow is a fresh page.`);
+  document.getElementById('todayPct').textContent=`${Math.round(pct)}% of daily target`;
+  document.getElementById('todayRemaining').textContent=remaining>=0?`${fmt(remaining)} left`:`${fmt(Math.abs(remaining))} over`;
+  document.getElementById('todayProtein').textContent=fmt(tt.protein);
+  document.getElementById('todayCarbs').textContent=fmt(tt.carbs);
+  document.getElementById('todayFat').textContent=fmt(tt.fat);
+  renderMacroPlate(tt);
+  document.getElementById('todayTarget').textContent=fmt(goal);
+  document.getElementById('todayTargetNote').textContent=`calories · ${Math.round(pct)}% used`;
+  const bar=document.getElementById('todayProgressBar');
+  bar.style.width=pct+'%';
+  bar.parentElement.setAttribute('aria-valuenow',Math.round(pct));
+  renderTodayMenu(tt);
 }
 
 function renderGoal(){
   document.getElementById('goalInput').value=data.calorie_goal;
-  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+data.calorie_goal+'.';
+  document.getElementById('goalStatus').textContent='Current daily calorie goal: '+fmt(data.calorie_goal)+'.';
   const goal=data.calorie_goal;
   const tt=totalsForDate(data.entries,today());
   const pct=goal>0?Math.min(100,(tt.calories/goal)*100):0;
   const remaining=goal-tt.calories;
-  document.getElementById('goalTodayCalories').textContent=`${tt.calories.toFixed(0)} of ${goal.toFixed(0)} calories`;
-  document.getElementById('goalRemaining').textContent=remaining>=0?`${remaining.toFixed(0)} calories remaining today`:`${Math.abs(remaining).toFixed(0)} calories over goal today`;
-  const ring=document.getElementById('goalRing');
-  if(ring){ ring.style.strokeDashoffset=(276.46*(1-pct/100))+''; ring.setAttribute('aria-valuenow',Math.round(pct)); }
-  const pctEl=document.getElementById('goalRingPct');
-  if(pctEl) pctEl.textContent=pct.toFixed(0)+'%';
+  document.getElementById('goalFigure').textContent=fmt(goal);
+  document.getElementById('goalTodayCalories').textContent=`${fmt(tt.calories)} eaten today`;
+  document.getElementById('goalRemaining').textContent=remaining>=0?`${fmt(remaining)} remaining`:`${fmt(Math.abs(remaining))} over`;
+  const bar=document.getElementById('goalProgressBar');
+  bar.style.width=pct+'%';
+  bar.parentElement.setAttribute('aria-valuenow',Math.round(pct));
 }
 
 document.getElementById('saveGoal').addEventListener('click',()=>{
@@ -429,9 +708,15 @@ document.getElementById('saveGoal').addEventListener('click',()=>{
   clearInlineErrors();
   if(isNaN(g)||g<1){ showInlineError(goalInput,'Value must be at least 1.'); goalInput.focus(); return; }
   data.calorie_goal=g; save(data);
-  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+g+'.';
+  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+fmt(g)+'.';
   render();
+  toast('Daily goal updated to '+fmt(g)+' calories.','success');
 });
+
+document.querySelectorAll('[data-goal-preset]').forEach(btn=>btn.addEventListener('click',()=>{
+  document.getElementById('goalInput').value=btn.dataset.goalPreset;
+  document.getElementById('goalInput').focus();
+}));
 
 document.querySelectorAll('.meal-chip').forEach(c=>{
   c.classList.toggle('active', c.dataset.meal==='breakfast');
@@ -450,5 +735,3 @@ render();
 </script>
 </body>
 </html>
-
-
