@@ -402,32 +402,12 @@ function renderRecipes(recipes){
   });
 }
 
-function glideTo(target,duration=1200){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ target.scrollIntoView({block:'start'}); return; }
-  const startY=window.scrollY;
-  const margin=parseFloat(getComputedStyle(target).scrollMarginTop)||0;
-  const endY=Math.max(0,startY+target.getBoundingClientRect().top-margin);
-  const distance=endY-startY;
-  if(Math.abs(distance)<2) return;
-  const startTime=performance.now();
-  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
-  let cancelled=false;
-  const clean=()=>{
-    window.removeEventListener('wheel',stop);
-    window.removeEventListener('touchstart',stop);
-    window.removeEventListener('keydown',stop);
-  };
-  const stop=()=>{ cancelled=true; clean(); };
-  window.addEventListener('wheel',stop,{passive:true});
-  window.addEventListener('touchstart',stop,{passive:true});
-  window.addEventListener('keydown',stop);
-  const step=now=>{
-    if(cancelled) return;
-    const t=Math.min(1,(now-startTime)/duration);
-    window.scrollTo(0,startY+distance*ease(t));
-    if(t<1) requestAnimationFrame(step); else clean();
-  };
-  requestAnimationFrame(step);
+function glideTo(target){
+  // Let the browser's native smooth scroller do the work. The old version
+  // recalculated layout and called window.scrollTo() on every animation frame,
+  // which fought the GPU/CPU for frames while the local model was running.
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start',inline:'nearest'});
 }
 
 document.getElementById('conjureBtn').addEventListener('click',async()=>{
