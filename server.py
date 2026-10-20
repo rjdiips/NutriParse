@@ -32,6 +32,7 @@ ENV_KEYS = (
     "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_BASE_URL",
     "LOCAL_IMAGE_API_URL",
     "LOCAL_IMAGE_GENERATION_ENABLED",
+    "LOCAL_IMAGE_WIDTH", "LOCAL_IMAGE_HEIGHT", "LOCAL_IMAGE_STEPS",
     "OPENROUTER_TOKEN", "OPEN_ROUTER_API_KEY",
 )
 LOGGER = logging.getLogger("calorie_tracker.llm")
@@ -289,15 +290,26 @@ def suggest_recipes(ingredients, use_soon, env):
     return {"recipes": recipes}
 
 
+def _image_int(env, key, default, low, high):
+    try:
+        value = int(env.get(key, str(default)).strip())
+    except (TypeError, ValueError):
+        value = default
+    return max(low, min(high, value))
+
+
 def generate_local_recipe_image(recipe, endpoint, env):
-    """Ask the local OpenVINO API to render a recipe image."""
+    """Ask the local A1111-compatible API to render a recipe image."""
     prompt = (
         "Photorealistic editorial food photograph of a finished dish: "
         f"{recipe['title']}. {recipe['description']} Plated naturally, warm soft daylight, "
         "three-quarter close view, simple uncluttered kitchen background, no text."
     )
     body = json.dumps({
-        "prompt": prompt, "steps": 20, "width": 512, "height": 512,
+        "prompt": prompt,
+        "steps": _image_int(env, "LOCAL_IMAGE_STEPS", 20, 1, 100),
+        "width": _image_int(env, "LOCAL_IMAGE_WIDTH", 512, 64, 2048),
+        "height": _image_int(env, "LOCAL_IMAGE_HEIGHT", 512, 64, 2048),
     }).encode("utf-8")
     request = urllib.request.Request(endpoint, data=body,
                                      headers={"Content-Type": "application/json"}, method="POST")
