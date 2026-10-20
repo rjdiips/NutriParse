@@ -43,17 +43,13 @@ The "Add Entry" tab now includes a **Portion** field and a **Suggest with AI** b
 
 The **Leftover Alchemist** tab accepts a free-text ingredient list and an optional "use soon" note. It returns three playful recipe ideas with practical steps and approximate nutrition per serving; the recipes appear as soon as the text response is ready, while local AI food images load in the background when the image service is running. **Add to tracker** prefills the Add Entry form for review; it never saves automatically. Only the submitted ingredients and note are sent to the configured LLM provider, not tracker entries or the calorie goal. Recipe images use a local service at `http://127.0.0.1:7860` by default; no image-generation API is called or charged.
 
-### Local recipe images (NVIDIA CUDA, recommended)
+### Local recipe images (NVIDIA CUDA)
 
 Recipe images use an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` endpoint. On an NVIDIA GPU, run `setup_image_generator.bat` once. It downloads the stable-diffusion.cpp CUDA build (about 900 MB including the CUDA runtime) and Stability AI's SDXL-Turbo checkpoint (6.9 GB). Then launch `start_image_generator.bat` before using the Alchemist. The service binds to `127.0.0.1:7860`, uses the GPU, and produces 512×512 images in 6 steps, typically in a few seconds each on an 8 GB laptop GPU. First startup loads the checkpoint and can take 20–40 seconds.
 
 Turbo checkpoints expect CFG 1 and few sampling steps; the start script passes both. Image size and steps are read from `.env` (`LOCAL_IMAGE_WIDTH`, `LOCAL_IMAGE_HEIGHT`, `LOCAL_IMAGE_STEPS`). If you replace SDXL-Turbo with a regular checkpoint such as SD 1.5, set `LOCAL_IMAGE_STEPS=20` in `.env` and adjust `--cfg-scale` in the start script. Binaries and model files live in `.image-tools/` and `models/`, both excluded by `.gitignore`.
 
-### Local recipe images (Intel OpenVINO, alternative)
-
-On Windows with the Python install manager (`py`) available, run `setup_local_image_generator.bat` once. It installs a project-local Python runtime and OpenVINO GenAI environment, then downloads Intel's pre-converted, quantized Stable Diffusion 1.5 model (about 2.3 GB). Launch `start_local_image_generator.bat` before using the Alchemist. The service binds to `127.0.0.1:7860`, uses the Intel GPU when available (otherwise CPU), and produces 512×512 images in sequence after the recipe ideas have already appeared. First startup and model compilation can take several minutes. This path is Intel-specific; on AMD GPUs it falls back to CPU.
-
-Either image service is optional: if it is stopped, recipe ideas still load without images. Set `LOCAL_IMAGE_GENERATION_ENABLED=false` in `.env` to disable image requests entirely, or override `LOCAL_IMAGE_API_URL` to use another address. Model files, runtime, and virtual environments stay local and are excluded by `.gitignore`.
+The image service is optional: if it is stopped, recipe ideas still load without images. Set `LOCAL_IMAGE_GENERATION_ENABLED=false` in `.env` to disable image requests entirely, or override `LOCAL_IMAGE_API_URL` to use another address.
 
 ## AI suggestions setup
 
@@ -96,5 +92,4 @@ provider payloads are not logged.
 - `.env.example` â€” documented environment variables template
 - `README.md` â€” this file
 - `setup_image_generator.bat` / `start_image_generator.bat` â€” CUDA recipe image service (stable-diffusion.cpp + SDXL-Turbo)
-- `setup_local_image_generator.bat` / `start_local_image_generator.bat` â€” Intel OpenVINO alternative
 - `.image-tools/`, `models/` â€” downloaded image runtime and models (ignored by Git)

@@ -1,7 +1,4 @@
-.local-image-env/
-.image-env/
 .image-tools/
-.python-runtime/
 models/
 __pycache__/
 .env
