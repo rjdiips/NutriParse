@@ -343,6 +343,12 @@ class Handler(SimpleHTTPRequestHandler):
         filename = STATIC_FILES.get(route)
         return str(BASE_DIR / filename) if filename else str(BASE_DIR / "__not_public__")
 
+    def do_GET(self):
+        if urlsplit(self.path).path == "/health":
+            self._json_ok({"status": "ok"})
+            return
+        super().do_GET()
+
     def do_POST(self):
         route = urlsplit(self.path).path
         if route not in ("/api/suggest", "/api/leftover-alchemist", "/api/recipe-image"):
