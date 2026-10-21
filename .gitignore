@@ -4,6 +4,7 @@ __pycache__/
 .env
 logs/
 .vscode/
+data.json
 
 # Local design prototypes
 prototype-*

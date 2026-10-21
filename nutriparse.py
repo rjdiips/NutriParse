@@ -1,12 +1,15 @@
 import json
-import os
 import urllib.request
 import urllib.error
 from datetime import date, datetime, timedelta
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
+import store
 
-MEALS = ["breakfast", "lunch", "dinner", "snack"]
+# The CLI and the web app share one journal file, so an entry saved in the
+# browser shows up here and the other way round.
+DATA_FILE = store.DEFAULT_PATH
+
+MEALS = store.MEALS
 MACROS = ["protein", "carbs", "fat"]
 
 SUGGEST_URL = "http://localhost:8000/api/suggest"
@@ -15,24 +18,23 @@ CALORIE_GOAL_KEY = "calorie_goal"
 ENTRIES_KEY = "entries"
 
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {CALORIE_GOAL_KEY: 2000, ENTRIES_KEY: []}
+def load_store():
+    """Read the shared journal, stopping with an explanation if it is unreadable."""
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if CALORIE_GOAL_KEY not in data:
-            data[CALORIE_GOAL_KEY] = 2000
-        if ENTRIES_KEY not in data:
-            data[ENTRIES_KEY] = []
-        return data
-    except (json.JSONDecodeError, OSError):
-        return {CALORIE_GOAL_KEY: 2000, ENTRIES_KEY: []}
+        return store.load(DATA_FILE)
+    except store.StoreError as error:
+        print(f"\nCould not read the journal: {error}")
+        print(f"Fix or move {DATA_FILE} and start again.")
+        raise SystemExit(1) from error
 
 
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+def save_entries(entries):
+    """Add validated entries through the shared store."""
+    try:
+        return store.add_entries(DATA_FILE, entries)
+    except store.StoreError as error:
+        print(f"Could not save: {error}")
+        return None
 
 
 def prompt_float(prompt_text, allow_empty=False, min_value=0):
@@ -74,7 +76,7 @@ def prompt_choice(prompt_text, choices):
         print(f"Choose one of: {', '.join(choices)}")
 
 
-def add_entry(data):
+def add_entry():
     print("\n--- Add Food Entry ---")
     name = input("Food name: ").strip()
     if not name:
@@ -96,7 +98,6 @@ def add_entry(data):
             date_str = date.today().isoformat()
 
     entry = {
-        "id": datetime.now().timestamp(),
         "name": name,
         "calories": calories,
         "protein": protein,
@@ -105,82 +106,85 @@ def add_entry(data):
         "meal": meal,
         "date": date_str,
     }
-    data[ENTRIES_KEY].append(entry)
-    save_data(data)
-    print(f"Added '{name}' ({calories} cal) to {meal} on {date_str}.")
+    if save_entries([entry]) is None:
+        return
+    print(f"Added '{name}' ({calories:.0f} cal) to {meal} on {date_str}.")
 
 
-def list_entries(data):
+def list_entries():
     print("\n--- Recent Entries ---")
-    entries = sorted(data[ENTRIES_KEY], key=lambda e: e["date"], reverse=True)
+    data = load_store()
+    entries = sorted(data[ENTRIES_KEY], key=lambda e: str(e.get("date", "")), reverse=True)
     if not entries:
         print("No entries found.")
         return
     for entry in entries[:20]:
         print(
-            f"{entry['date']} | {entry['meal']:9s} | {entry['name']:20s} | "
-            f"{entry['calories']:5.0f} cal | P{entry['protein']:.0f}g "
-            f"C{entry['carbs']:.0f}g F{entry['fat']:.0f}g"
+            f"{entry.get('date', '?')} | {str(entry.get('meal', '?')):9s} | "
+            f"{str(entry.get('name', '?'))[:20]:20s} | "
+            f"{store.number(entry.get('calories')):5.0f} cal | "
+            f"P{store.number(entry.get('protein')):.0f}g "
+            f"C{store.number(entry.get('carbs')):.0f}g "
+            f"F{store.number(entry.get('fat')):.0f}g"
         )
 
 
-def delete_entry(data):
+def delete_entry():
     print("\n--- Delete Entry ---")
-    entries = sorted(data[ENTRIES_KEY], key=lambda e: e["date"], reverse=True)
+    data = load_store()
+    entries = sorted(data[ENTRIES_KEY], key=lambda e: str(e.get("date", "")), reverse=True)
     if not entries:
         print("No entries to delete.")
         return
     for i, entry in enumerate(entries, 1):
         print(
-            f"{i}. {entry['date']} | {entry['meal']:9s} | {entry['name']:20s} | "
-            f"{entry['calories']:5.0f} cal"
+            f"{i}. {entry.get('date', '?')} | {str(entry.get('meal', '?')):9s} | "
+            f"{str(entry.get('name', '?'))[:20]:20s} | "
+            f"{store.number(entry.get('calories')):5.0f} cal"
         )
     choice = prompt_int("Entry number to delete: ", min_value=1)
     if choice < 1 or choice > len(entries):
         print("Invalid selection.")
         return
-    removed = entries.pop(choice - 1)
-    data[ENTRIES_KEY] = [e for e in data[ENTRIES_KEY] if e["id"] != removed["id"]]
-    save_data(data)
-    print(f"Deleted '{removed['name']}'.")
+    removed = entries[choice - 1]
+    try:
+        store.delete_entry(DATA_FILE, removed.get("id"))
+    except store.StoreError as error:
+        print(f"Could not delete: {error}")
+        return
+    print(f"Deleted '{removed.get('name', 'entry')}'.")
 
 
-def totals_for_date(entries, target_date):
-    day_entries = [e for e in entries if e["date"] == target_date]
-    return {
-        "calories": sum(e["calories"] for e in day_entries),
-        "protein": sum(e["protein"] for e in day_entries),
-        "carbs": sum(e["carbs"] for e in day_entries),
-        "fat": sum(e["fat"] for e in day_entries),
-        "count": len(day_entries),
-    }
-
-
-def summary(data):
+def summary():
     print("\n--- Daily Summary ---")
+    data = load_store()
     goal = data[CALORIE_GOAL_KEY]
     today_obj = date.today()
     today = today_obj.isoformat()
     days = [(today_obj - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
     print(f"{'Date':<12} {'Calories':>9} {'Goal':>6} {'P':>5} {'C':>5} {'F':>5}")
     for d in days:
-        t = totals_for_date(data[ENTRIES_KEY], d)
+        t = store.totals_for_date(data[ENTRIES_KEY], d)
         mark = " *today" if d == today else ""
         print(
             f"{d}{mark:<7} {t['calories']:>9.0f} {goal:>6.0f} "
             f"{t['protein']:>5.0f} {t['carbs']:>5.0f} {t['fat']:>5.0f}"
         )
-    today_totals = totals_for_date(data[ENTRIES_KEY], today)
+    today_totals = store.totals_for_date(data[ENTRIES_KEY], today)
     remaining = goal - today_totals["calories"]
     print(f"\nToday: {today_totals['calories']:.0f} / {goal:.0f} calories "
           f"({remaining:.0f} remaining)")
 
 
-def set_goal(data):
+def set_goal():
+    data = load_store()
     print(f"\nCurrent daily calorie goal: {data[CALORIE_GOAL_KEY]:.0f}")
     goal = prompt_float("New daily calorie goal: ", min_value=1)
-    data[CALORIE_GOAL_KEY] = goal
-    save_data(data)
+    try:
+        store.set_goal(DATA_FILE, goal)
+    except store.StoreError as error:
+        print(f"Could not save the goal: {error}")
+        return
     print(f"Daily calorie goal set to {goal:.0f}.")
 
 
@@ -204,7 +208,7 @@ def suggest_nutrition(name, portion=""):
         ) from e
 
 
-def ai_suggest(data):
+def ai_suggest():
     print("\n--- AI Nutrition Suggest ---")
     name = input("Food name: ").strip()
     if not name:
@@ -225,7 +229,6 @@ def ai_suggest(data):
     use = input("Use these values to add an entry? (y/N): ").strip().lower()
     if use == "y":
         entry = {
-            "id": datetime.now().timestamp(),
             "name": result.get("name", name),
             "calories": float(result.get("calories", 0)),
             "protein": float(result.get("protein", 0)),
@@ -234,8 +237,8 @@ def ai_suggest(data):
             "meal": prompt_choice("Meal", MEALS),
             "date": date.today().isoformat(),
         }
-        data[ENTRIES_KEY].append(entry)
-        save_data(data)
+        if save_entries([entry]) is None:
+            return
         print(f"Added '{entry['name']}' ({entry['calories']:.0f} cal).")
 
 
@@ -251,22 +254,22 @@ def print_menu():
 
 
 def main():
-    data = load_data()
+    print(f"Journal: {DATA_FILE}")
     while True:
         print_menu()
         choice = input("Choose an option: ").strip()
         if choice == "1":
-            add_entry(data)
+            add_entry()
         elif choice == "2":
-            list_entries(data)
+            list_entries()
         elif choice == "3":
-            summary(data)
+            summary()
         elif choice == "4":
-            set_goal(data)
+            set_goal()
         elif choice == "5":
-            delete_entry(data)
+            delete_entry()
         elif choice == "6":
-            ai_suggest(data)
+            ai_suggest()
         elif choice == "7":
             print("Goodbye!")
             break
