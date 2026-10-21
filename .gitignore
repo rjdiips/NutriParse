@@ -7,3 +7,14 @@ logs/
 
 # Local design prototypes
 prototype-*
+
+# LaTeX build artifacts (main.tex resume)
+main.aux
+main.fdb_latexmk
+main.fls
+main.log
+main.out
+main.synctex.gz
+
+# Resume source and build output (kept local)
+resume/

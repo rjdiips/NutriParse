@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Calorie Tracker</title>
+<title>NutriParse — Journal (earlier iteration)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@400..800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="journal-legacy.css" />
 </head>
 <body>
 <div class="a-page">
   <header class="a-header">
     <div class="a-header__meta"><span>Vol. I &mdash; A daily record</span><span id="headerDate"></span></div>
-    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">Calorie Tracker</div><span class="a-masthead__rule"></span></div>
+    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">NutriParse</div><span class="a-masthead__rule"></span></div>
     <p class="a-tagline">A daily record of what nourishes you &mdash; kept gently, read often.</p>
   </header>
 
@@ -178,7 +178,7 @@
     </div>
   </main>
 
-  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>Calorie Tracker &middot; A daily record</span></footer>
+  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>NutriParse &middot; Journal, earlier iteration &middot; <a class="a-footer__link" href="/">Back to Compose &rarr;</a></span></footer>
 </div>
 
 <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
@@ -223,7 +223,7 @@ function activateTab(name){
   document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
   active.classList.add('active'); active.setAttribute('aria-selected','true');
   document.getElementById('panel-'+name).classList.add('active');
-  document.title='Calorie Tracker — '+active.textContent.trim().replace(/^\d{2}/,'');
+  document.title='NutriParse - '+active.textContent.trim().replace(/^\d{2}/,'');
   render();
 }
 

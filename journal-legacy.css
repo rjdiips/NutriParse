@@ -1,5 +1,5 @@
 /* ============================================================
-   Calorie Tracker — The Daily Spread
+   NutriParse — The Daily Spread
    Editorial system borrowed from the Leftover Alchemist card.
    ============================================================ */
 
@@ -626,6 +626,8 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 }
 .a-footer p { margin: 0; color: var(--muted); font-family: var(--serif); font-size: 13px; font-style: italic; }
 .a-footer span { color: var(--faint); font-family: var(--sans); font-size: 8px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.a-footer__link { color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+.a-footer__link:hover { color: var(--ink); }
 
 /* Today */
 .a-lead {

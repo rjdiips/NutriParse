@@ -240,7 +240,8 @@ def ai_suggest(data):
 
 
 def print_menu():
-    print("\n=== Calorie Tracker ===")
+    print("\n=== NutriParse ===")
+    print("1. Add a food entry")
     print("2. View recent entries")
     print("3. View daily summary")
     print("4. Set daily calorie goal")

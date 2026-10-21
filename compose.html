@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NutriParse — Compose</title>
+<link rel="stylesheet" href="compose.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="brand">NutriParse</span>
+  </div>
+  <nav class="topbar__nav" aria-label="Views">
+    <button type="button" class="viewtab is-active" data-view="compose" aria-pressed="true">Compose</button>
+    <button type="button" class="viewtab" data-view="journal" aria-pressed="false">Journal</button>
+  </nav>
+</header>
+
+<main class="page">
+
+  <!-- ============ compose ============ -->
+
+  <div id="view-compose" class="view">
+
+    <section class="composer" aria-labelledby="composeLabel">
+      <div class="composer__top">
+        <div class="composer__intro">
+          <h1 class="composer__label" id="composeLabel">Describe what you ate</h1>
+          <p class="composer__sub" id="composeSub">One line is enough. The model splits it into items, and every number stays editable.</p>
+        </div>
+        <div class="modes" role="group" aria-label="Mode">
+          <button type="button" class="mode is-active" data-mode="estimate" aria-pressed="true">Estimate</button>
+          <button type="button" class="mode" data-mode="cook" aria-pressed="false">Cook</button>
+        </div>
+      </div>
+
+      <textarea id="mealText" rows="2" maxlength="500" spellcheck="false"
+        placeholder="2 rotis, dal, and a glass of lassi"
+        aria-describedby="composerHint"></textarea>
+
+      <label class="field field--soon" id="useSoonWrap" hidden>
+        <span>Anything to use soon? <em>optional</em></span>
+        <input id="useSoon" type="text" maxlength="500" placeholder="e.g. spinach is looking dramatic" />
+      </label>
+
+      <div class="examples" data-examples="estimate" aria-label="Example inputs">
+        <span class="examples__label">Try</span>
+        <button type="button" class="chip chip--example" data-example="2 rotis, dal, and a glass of lassi">2 rotis, dal, lassi</button>
+        <button type="button" class="chip chip--example" data-example="leftover rice with 2 eggs and half a bell pepper">rice, eggs, pepper</button>
+        <button type="button" class="chip chip--example" data-example="chicken shawarma roll and a coke">shawarma roll</button>
+      </div>
+
+      <div class="examples" data-examples="cook" aria-label="Example ingredients" hidden>
+        <span class="examples__label">Try</span>
+        <button type="button" class="chip chip--example" data-example="cooked rice, 2 eggs, half a bell pepper, spinach">rice, eggs, pepper</button>
+        <button type="button" class="chip chip--example" data-example="chicken thighs, cream, mushrooms, parmesan">chicken, cream, mushrooms</button>
+        <button type="button" class="chip chip--example" data-example="leftover dal, tomatoes, onion, ginger">leftover dal, tomatoes</button>
+      </div>
+
+      <div class="composer__foot">
+        <p class="composer__hint" id="composerHint">
+          <kbd>Ctrl</kbd><span aria-hidden="true">+</span><kbd>Enter</kbd> to <span id="hintVerb">parse</span>
+          <span class="dot" aria-hidden="true">·</span>
+          <span id="charCount">0</span>/500
+        </p>
+        <div class="composer__actions">
+          <button type="button" id="manualBtn" class="link link--button">Add a row manually</button>
+          <button type="button" id="parseBtn" class="btn btn--primary">Parse meal</button>
+        </div>
+      </div>
+    </section>
+
+    <p id="status" class="sr-only" role="status" aria-live="polite"></p>
+
+    <div id="error" class="alert" role="alert" hidden>
+      <div class="alert__body">
+        <strong class="alert__title" id="errorTitle">Parse failed</strong>
+        <p class="alert__msg" id="errorMsg"></p>
+      </div>
+      <div class="alert__actions">
+        <button type="button" id="sampleBtn" class="link link--button">View a sample result</button>
+        <button type="button" id="retryBtn" class="btn">Retry</button>
+      </div>
+    </div>
+
+    <section id="result" class="result" aria-labelledby="resultTitle" hidden>
+      <header class="result__head">
+        <div class="result__titles">
+          <h2 id="resultTitle" class="focus-target">Parsed items</h2>
+          <p class="result__sub" id="resultSub"></p>
+        </div>
+        <div class="result__actions">
+          <label class="meal">
+            <span>Meal</span>
+            <select id="mealSelect">
+              <option value="breakfast">Breakfast</option>
+              <option value="lunch" selected>Lunch</option>
+              <option value="dinner">Dinner</option>
+              <option value="snack">Snack</option>
+            </select>
+          </label>
+          <button type="button" id="saveBtn" class="btn">Save to journal</button>
+        </div>
+      </header>
+
+      <div class="table" role="table" aria-label="Parsed meal items">
+        <div class="table__head" role="row">
+          <span role="columnheader">Item</span>
+          <span role="columnheader">Portion</span>
+          <span role="columnheader" class="num">kcal</span>
+          <span role="columnheader" class="num">P</span>
+          <span role="columnheader" class="num">C</span>
+          <span role="columnheader" class="num">F</span>
+          <span role="columnheader"><span class="sr-only">Remove</span></span>
+        </div>
+        <div id="rows"></div>
+        <div class="table__totals" role="row">
+          <span role="cell">Total</span>
+          <span role="cell" class="table__totalsNote" id="totalsNote"></span>
+          <strong role="cell" class="num" id="totalCalories">0</strong>
+          <strong role="cell" class="num" id="totalProtein">0</strong>
+          <strong role="cell" class="num" id="totalCarbs">0</strong>
+          <strong role="cell" class="num" id="totalFat">0</strong>
+          <span role="cell"></span>
+        </div>
+      </div>
+
+      <div class="macrobar" id="macrobar" aria-hidden="true">
+        <span class="macrobar__seg macrobar__seg--p" data-macro="p"></span>
+        <span class="macrobar__seg macrobar__seg--c" data-macro="c"></span>
+        <span class="macrobar__seg macrobar__seg--f" data-macro="f"></span>
+      </div>
+
+      <details class="inspector" id="inspector">
+        <summary>
+          <span class="inspector__summary" id="inspectorSummary">Request details</span>
+          <span class="inspector__chips" id="inspectorChips"></span>
+        </summary>
+        <div class="inspector__body">
+          <dl class="inspector__grid" id="inspectorGrid"></dl>
+          <div class="inspector__raw">
+            <header>
+              <span id="inspectorRawLabel">Response JSON</span>
+              <button type="button" id="copyBtn" class="link link--button">Copy</button>
+            </header>
+            <pre id="rawJson"></pre>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section id="cookResult" class="result" aria-labelledby="cookTitle" hidden>
+      <header class="result__head">
+        <div class="result__titles">
+          <h2 id="cookTitle" class="focus-target">Recipe ideas</h2>
+          <p class="result__sub" id="cookSub"></p>
+        </div>
+        <div class="result__actions">
+          <span class="result__note" id="cookNote"></span>
+        </div>
+      </header>
+
+      <div class="recipes" id="recipeGrid" aria-live="polite"></div>
+
+      <details class="inspector" id="cookInspector">
+        <summary>
+          <span class="inspector__summary">Request details</span>
+          <span class="inspector__chips" id="cookChips"></span>
+        </summary>
+        <div class="inspector__body">
+          <dl class="inspector__grid" id="cookGrid"></dl>
+          <div class="inspector__raw">
+            <header>
+              <span>Response JSON</span>
+              <button type="button" id="cookCopyBtn" class="link link--button">Copy</button>
+            </header>
+            <pre id="cookRaw"></pre>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section id="empty" class="empty">
+      <span class="empty__label" id="emptyLabel">No meal parsed yet</span>
+      <p id="emptyText">Type a meal above and the service returns one row per food, each with calories and macros,
+        plus the exact call detail behind them. Nothing is saved until you choose to save it.</p>
+    </section>
+
+  </div>
+
+  <!-- ============ journal ============ -->
+
+  <div id="view-journal" class="view" hidden>
+
+    <section class="jhead">
+      <div>
+        <span class="eyebrow">The record</span>
+        <h1 class="jhead__title" id="journalTitle" tabindex="-1">Journal</h1>
+        <p class="jhead__sub" id="journalSub">Everything you have saved, newest day first.</p>
+      </div>
+      <button type="button" class="btn" id="journalAddBtn">Add a row manually</button>
+    </section>
+
+    <section class="today" aria-labelledby="todayLabel">
+      <div class="today__main">
+        <span class="eyebrow" id="todayLabel">Today</span>
+        <p class="today__figure">
+          <strong id="todayCalories">0</strong>
+          <span>of <span id="todayGoal">2,000</span> kcal</span>
+        </p>
+        <div class="bar" id="todayBarWrap" role="progressbar" aria-label="Calories today against the daily goal"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <i id="todayBar" style="width:0%"></i>
+        </div>
+        <p class="today__meta">
+          <span id="todayPct">0% of goal</span>
+          <span class="dot" aria-hidden="true">·</span>
+          <span id="todayRemaining">2,000 left</span>
+        </p>
+      </div>
+      <dl class="today__facts">
+        <div><dt>Protein</dt><dd id="todayProtein">0 g</dd></div>
+        <div><dt>Carbs</dt><dd id="todayCarbs">0 g</dd></div>
+        <div><dt>Fat</dt><dd id="todayFat">0 g</dd></div>
+        <div><dt>Entries</dt><dd id="todayCount">0</dd></div>
+      </dl>
+    </section>
+
+    <section class="goal" aria-labelledby="goalLabel">
+      <div class="goal__copy">
+        <span class="eyebrow" id="goalLabel">Daily goal</span>
+        <p class="goal__note" id="goalStatus" role="status" aria-live="polite">A target, not a verdict.</p>
+      </div>
+      <div class="goal__editor">
+        <label class="field" for="goalInput">
+          <span>Calories per day</span>
+          <input id="goalInput" type="number" min="1" step="50" inputmode="numeric" />
+        </label>
+        <div class="goal__presets">
+          <button type="button" class="chip" data-goal-preset="1800">1,800</button>
+          <button type="button" class="chip" data-goal-preset="2000">2,000</button>
+          <button type="button" class="chip" data-goal-preset="2200">2,200</button>
+        </div>
+        <button type="button" class="btn" id="saveGoalBtn">Save goal</button>
+      </div>
+    </section>
+
+    <section class="history" aria-labelledby="historyLabel">
+      <div class="history__head">
+        <h2 class="history__title focus-target" id="historyLabel" tabindex="-1">History</h2>
+        <label class="search">
+          <span class="sr-only">Search saved entries</span>
+          <input id="journalSearch" type="search" placeholder="Search entries…" autocomplete="off" />
+        </label>
+      </div>
+      <div id="journalDays" class="days"></div>
+      <div id="journalEmpty" class="empty">
+        <span class="empty__label" id="journalEmptyLabel">Nothing saved yet</span>
+        <p id="journalEmptyText">Compose a meal or a recipe and save it, and it lands here. You can also add a row by hand.</p>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="foot">
+  <span>NutriParse · Compose and Journal</span>
+  <span class="foot__note">Nutrition values are model estimates, not measurements. ·
+    <a class="foot__link" href="journal-legacy.html">Earlier journal view</a></span>
+</footer>
+
+<script src="compose.js"></script>
+</body>
+</html>
