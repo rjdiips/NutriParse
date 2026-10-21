@@ -693,7 +693,7 @@ kbd {
 }
 .inspector__raw .link--button { font-size: 11.5px; letter-spacing: 0.02em; text-transform: none; color: var(--ink-2); }
 
-#rawJson {
+.inspector__raw pre {
   margin: 0;
   padding: 12px;
   max-height: 240px;
@@ -705,7 +705,10 @@ kbd {
   font-size: 12px;
   line-height: 1.55;
   color: var(--ink-2);
-  white-space: pre;
+  /* Wrap long JSON strings instead of widening the card; recipe descriptions
+     and steps are long enough to push a scrolling line out of the panel. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- recipes ---------- */
