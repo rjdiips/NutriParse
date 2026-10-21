@@ -183,12 +183,19 @@
 
 <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
+<script src="journal-client.js"></script>
 <script>
-const KEY='ct_data';
 const defaultData=()=>({calorie_goal:2000, entries:[]});
-function load(){ try{ const d=JSON.parse(localStorage.getItem(KEY)); if(!d||!d.entries) return defaultData(); if(!d.calorie_goal) d.calorie_goal=2000; return d;}catch{return defaultData();} }
-function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
-let data=load();
+/* The journal lives in the server's data.json (see journal-client.js), shared
+   with the Compose page and the CLI. `data` below is this page's copy of it. */
+let data=defaultData();
+function applyData(doc){
+  data={
+    calorie_goal:(Number(doc&&doc.calorie_goal)||2000),
+    entries:(doc&&Array.isArray(doc.entries))?doc.entries:[],
+  };
+  return data;
+}
 
 function localDateString(date=new Date()){
   const year=date.getFullYear();
@@ -465,7 +472,7 @@ document.getElementById('entryForm').addEventListener('submit',event=>{
   document.getElementById('addBtn').click();
 });
 
-document.getElementById('addBtn').addEventListener('click',()=>{
+document.getElementById('addBtn').addEventListener('click', async ()=>{
   const nameInput=document.getElementById('name');
   const caloriesInput=document.getElementById('calories');
   const name=nameInput.value.trim();
@@ -480,8 +487,12 @@ document.getElementById('addBtn').addEventListener('click',()=>{
   const meal=activeMeal?activeMeal.dataset.meal:'breakfast';
   let dateStr=document.getElementById('date').value;
   if(!dateStr) dateStr=today();
-  data.entries.push({id:Date.now(), name, calories, protein, carbs, fat, meal, date:dateStr});
-  save(data);
+  try{
+    applyData(await JournalStore.addEntries([{name, calories, protein, carbs, fat, meal, date:dateStr}]));
+  }catch(error){
+    toast('Could not save: '+error.message,'error');
+    return;
+  }
   ['name','calories','protein','carbs','fat','portion'].forEach(id=>document.getElementById(id).value='');
   toast(`Added '${name}' (${Math.round(calories)} cal) to ${meal} on ${dateStr}.`, 'success');
   render();
@@ -564,12 +575,17 @@ function editEntry(id){
   activateTab('add');
 }
 
-function deleteEntry(id){
+async function deleteEntry(id){
   const entry=data.entries.find(e=>e.id===id);
   if(!entry) return;
   if(!confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
-  data.entries=data.entries.filter(e=>e.id!==id);
-  save(data); render();
+  try{
+    applyData(await JournalStore.removeEntry(id));
+  }catch(error){
+    toast('Could not delete: '+error.message,'error');
+    return;
+  }
+  render();
 }
 
 function renderEntries(){
@@ -682,15 +698,20 @@ function renderGoal(){
   bar.parentElement.setAttribute('aria-valuenow',Math.round(pct));
 }
 
-document.getElementById('saveGoal').addEventListener('click',()=>{
+document.getElementById('saveGoal').addEventListener('click', async ()=>{
   const g=parseFloat(document.getElementById('goalInput').value);
   const goalInput=document.getElementById('goalInput');
   clearInlineErrors();
   if(isNaN(g)||g<1){ showInlineError(goalInput,'Value must be at least 1.'); goalInput.focus(); return; }
-  data.calorie_goal=g; save(data);
-  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+fmt(g)+'.';
+  try{
+    applyData(await JournalStore.setGoal(Math.round(g)));
+  }catch(error){
+    toast('Could not save the goal: '+error.message,'error');
+    return;
+  }
+  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+fmt(data.calorie_goal)+'.';
   render();
-  toast('Daily goal updated to '+fmt(g)+' calories.','success');
+  toast('Daily goal updated to '+fmt(data.calorie_goal)+' calories.','success');
 });
 
 document.querySelectorAll('[data-goal-preset]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -711,7 +732,20 @@ document.querySelectorAll('.meal-chip').forEach(c=>{
 });
 
 function render(){ renderEntries(); renderSummary(); renderGoal(); }
-render();
+
+async function boot(){
+  try{
+    applyData(await JournalStore.read());
+    const claim=await JournalStore.claimBrowserEntries(data);
+    if(claim.document) applyData(claim.document);
+    if(claim.moved) toast(`Moved ${claim.moved} ${claim.moved===1?'entry':'entries'} from this browser to the server.`,'success');
+    if(claim.skipped) toast(`${claim.skipped} saved ${claim.skipped===1?'entry':'entries'} could not be read, so they were left in this browser.`,'error');
+  }catch(error){
+    toast('Could not reach the journal: '+error.message,'error');
+  }
+  render();
+}
+boot();
 </script>
 </body>
 </html>

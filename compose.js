@@ -3,7 +3,6 @@
    turns ingredients into recipe cards. Both expose the same call detail.
    Journal is the read side: what has been saved, against the daily goal. */
 
-const STORE_KEY = 'ct_data';
 const PARSE_ENDPOINT = '/api/parse';
 const COOK_ENDPOINT = '/api/leftover-alchemist';
 const IMAGE_ENDPOINT = '/api/recipe-image';
@@ -907,21 +906,55 @@ function wireCopy(parts) {
 wireCopy(estimateParts);
 wireCopy(cookParts);
 
-/* ---------- save to journal ---------- */
+/* ---------- journal store ---------- */
 
-function readStore() {
+/* The journal lives in the server's data.json rather than in this browser, so
+   the Journal view, the legacy journal, and the CLI all read one document.
+   journal-client.js holds the calls; every one of them answers with the whole
+   store, so the copy below is always whatever the server last saved. */
+
+let journal = { calorie_goal: 2000, entries: [] };let journalLoaded = false;
+let journalError = '';
+let migrated = false;
+let saving = false;
+
+function applyDoc(doc) {
+  journal = {
+    calorie_goal: num(doc && doc.calorie_goal) || 2000,
+    entries: Array.isArray(doc && doc.entries) ? doc.entries : [],
+  };
+  journalLoaded = true;
+  return journal;
+}
+
+async function loadJournal() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORE_KEY));
-    if (!parsed || !Array.isArray(parsed.entries)) return { calorie_goal: 2000, entries: [] };
-    if (!parsed.calorie_goal) parsed.calorie_goal = 2000;
-    return parsed;
-  } catch {
-    return { calorie_goal: 2000, entries: [] };
+    applyDoc(await JournalStore.read());
+    journalError = '';
+  } catch (error) {
+    journalLoaded = false;
+    journalError = error.message || 'The journal is unavailable.';
+    return;
+  }
+  if (migrated) return;
+  migrated = true;
+  try {
+    const claim = await JournalStore.claimBrowserEntries(journal);
+    if (claim.document) applyDoc(claim.document);
+    if (claim.moved) {
+      announce(`Moved ${claim.moved} ${claim.moved === 1 ? 'entry' : 'entries'} from this browser to the server.`);
+    }
+    if (claim.skipped) {
+      announce(`${claim.skipped} ${claim.skipped === 1 ? 'entry' : 'entries'} saved by the earlier version `
+        + 'of this page could not be read, so they were left in this browser.');
+    }
+  } catch (error) {
+    announce(`Entries saved in this browser could not be moved to the server: ${error.message}`);
   }
 }
 
-el.save.addEventListener('click', () => {
-  if (state.saved || state.isSample || state.items.length === 0) return;
+el.save.addEventListener('click', async () => {
+  if (saving || state.saved || state.isSample || state.items.length === 0) return;
 
   const blank = state.items.findIndex((item) => !String(item.name || '').trim());
   if (blank !== -1) {
@@ -931,28 +964,31 @@ el.save.addEventListener('click', () => {
     return;
   }
 
-  const store = readStore();
   const date = localDateISO();
   const meal = el.meal.value;
-  const stamp = Date.now();
-  state.items.forEach((item, index) => {
-    store.entries.push({
-      id: stamp + index,
-      name: String(item.name).trim(),
-      calories: num(item.calories),
-      protein: num(item.protein),
-      carbs: num(item.carbs),
-      fat: num(item.fat),
-      meal,
-      date,
-    });
-  });
+  const entries = state.items.map((item) => ({
+    name: String(item.name).trim(),
+    calories: num(item.calories),
+    protein: num(item.protein),
+    carbs: num(item.carbs),
+    fat: num(item.fat),
+    meal,
+    date,
+  }));
+
+  saving = true;
+  el.save.disabled = true;
+  el.save.textContent = 'Saving…';
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(store));
-  } catch {
-    showError('Could not save', 'Browser storage is unavailable or full.', false);
+    applyDoc(await JournalStore.addEntries(entries));
+  } catch (error) {
+    saving = false;
+    el.save.disabled = false;
+    el.save.textContent = 'Save to journal';
+    showError('Could not save', `${error.message} The rows are still here, so nothing was lost.`, false);
     return;
   }
+  saving = false;
   state.saved = true;
   el.save.textContent = `Saved ${state.items.length} to journal`;
   announce(`Saved ${state.items.length} items to ${meal} on ${date}.`);
@@ -1047,13 +1083,12 @@ function buildDay(group) {
   return day;
 }
 
-function deleteEntry(entry) {
+async function deleteEntry(entry) {
   if (!window.confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
-  const store = readStore();
-  store.entries = store.entries.filter((candidate) => candidate.id !== entry.id);
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(store));
-  } catch {
+    applyDoc(await JournalStore.removeEntry(entry.id));
+  } catch (error) {
+    showError('Could not delete', error.message || 'The journal is unavailable.', false);
     return;
   }
   renderJournal();
@@ -1061,10 +1096,9 @@ function deleteEntry(entry) {
 }
 
 function renderJournal() {
-  const store = readStore();
-  const goal = num(store.calorie_goal) || 2000;
+  const goal = num(journal.calorie_goal) || 2000;
   const today = localDateISO();
-  const todayEntries = store.entries.filter((entry) => entry.date === today);
+  const todayEntries = journal.entries.filter((entry) => entry.date === today);
   const totals = todayEntries.reduce((acc, entry) => {
     acc.calories += num(entry.calories);
     acc.protein += num(entry.protein);
@@ -1075,9 +1109,11 @@ function renderJournal() {
 
   const percent = goal > 0 ? Math.min(100, (totals.calories / goal) * 100) : 0;
   const remaining = goal - totals.calories;
-  const saved = store.entries.length;
+  const saved = journal.entries.length;
 
-  el.journalSub.textContent = `${saved} ${saved === 1 ? 'entry' : 'entries'} saved · ${longDate(today)}`;
+  el.journalSub.textContent = journalLoaded
+    ? `${saved} ${saved === 1 ? 'entry' : 'entries'} saved · ${longDate(today)}`
+    : 'Loading the journal…';
   el.todayCalories.textContent = fmt0(totals.calories);
   el.todayGoal.textContent = fmt0(goal);
   el.todayBar.style.width = `${percent.toFixed(1)}%`;
@@ -1091,35 +1127,44 @@ function renderJournal() {
 
   if (document.activeElement !== el.goalInput) el.goalInput.value = String(goal);
 
-  const groups = groupEntries(store.entries, el.journalSearch.value);
+  const groups = journalLoaded ? groupEntries(journal.entries, el.journalSearch.value) : [];
   el.journalDays.replaceChildren(...groups.map(buildDay));
 
   const searching = Boolean(el.journalSearch.value.trim());
   el.journalEmpty.hidden = groups.length > 0;
-  el.journalEmptyLabel.textContent = searching ? 'No entries match that search' : 'Nothing saved yet';
-  el.journalEmptyText.textContent = searching
-    ? 'Try a different food name or meal.'
-    : 'Compose a meal or a recipe and save it, and it lands here. You can also add a row by hand.';
+
+  if (!journalLoaded) {
+    el.journalEmptyLabel.textContent = 'Loading the journal…';
+    el.journalEmptyText.textContent = 'Reading your saved entries from the server.';
+  } else if (journalError) {
+    el.journalEmptyLabel.textContent = 'The journal is out of reach';
+    el.journalEmptyText.textContent = journalError;
+  } else if (searching) {
+    el.journalEmptyLabel.textContent = 'No entries match that search';
+    el.journalEmptyText.textContent = 'Try a different food name or meal.';
+  } else {
+    el.journalEmptyLabel.textContent = 'Nothing saved yet';
+    el.journalEmptyText.textContent = 'Compose a meal or a recipe and save it, and it lands here. You can also add a row by hand.';
+  }
 }
 
-function saveGoal() {
+async function saveGoal() {
   const value = Number(el.goalInput.value);
   if (!Number.isFinite(value) || value < 1) {
     el.goalStatus.textContent = 'Enter a goal of at least 1 calorie.';
     el.goalInput.focus();
     return;
   }
-  const store = readStore();
-  store.calorie_goal = Math.round(value);
+  el.goalStatus.textContent = 'Saving…';
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(store));
-  } catch {
-    el.goalStatus.textContent = 'Browser storage is unavailable, so the goal was not saved.';
+    applyDoc(await JournalStore.setGoal(Math.round(value)));
+  } catch (error) {
+    el.goalStatus.textContent = `Could not save the goal: ${error.message}`;
     return;
   }
-  el.goalStatus.textContent = `Goal set to ${fmt0(store.calorie_goal)} calories a day.`;
+  el.goalStatus.textContent = `Goal set to ${fmt0(journal.calorie_goal)} calories a day.`;
   renderJournal();
-  announce(`Daily goal set to ${fmt0(store.calorie_goal)} calories.`);
+  announce(`Daily goal set to ${fmt0(journal.calorie_goal)} calories.`);
 }
 
 el.journalSearch.addEventListener('input', renderJournal);
@@ -1226,14 +1271,20 @@ function showSample(mode) {
 el.resultTitle.tabIndex = -1;
 el.cookTitle.tabIndex = -1;
 
-const params = new URLSearchParams(location.search);
-const initialMode = params.get('sample') === 'cook'
-  ? 'cook'
-  : (COPY[params.get('mode')] ? params.get('mode') : 'estimate');
-setMode(initialMode);
-if (params.has('sample')) {
-  showSample(params.get('sample') === 'cook' ? 'cook' : 'estimate');
+async function boot() {
+  const params = new URLSearchParams(location.search);
+  const initialMode = params.get('sample') === 'cook'
+    ? 'cook'
+    : (COPY[params.get('mode')] ? params.get('mode') : 'estimate');
+  setMode(initialMode);
+  if (params.has('sample')) {
+    showSample(params.get('sample') === 'cook' ? 'cook' : 'estimate');
+  }
+  setView(params.get('view') === 'journal' ? 'journal' : 'compose');
+  updateCount();
+
+  await loadJournal();
+  renderJournal();
 }
-renderJournal();
-setView(params.get('view') === 'journal' ? 'journal' : 'compose');
-updateCount();
+
+boot();

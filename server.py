@@ -7,13 +7,14 @@ import logging
 from logging.handlers import RotatingFileHandler
 import math
 import os
+import store
 import time
 import urllib.error
 import urllib.request
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = "localhost"
@@ -24,12 +25,14 @@ LOG_FILE = LOG_DIR / "llm.log"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_TEXT_LENGTH = 500
 MAX_MEAL_ITEMS = 15
+JOURNAL_ROUTES = ("/api/journal/entries", "/api/journal/goal")
 STATIC_FILES = {
     "/": "compose.html",
     "/index.html": "compose.html",
     "/compose.html": "compose.html",
     "/compose.css": "compose.css",
     "/compose.js": "compose.js",
+    "/journal-client.js": "journal-client.js",
     "/journal-legacy.html": "journal-legacy.html",
     "/journal-legacy.css": "journal-legacy.css",
 }
@@ -429,14 +432,43 @@ class Handler(SimpleHTTPRequestHandler):
         return str(BASE_DIR / filename) if filename else str(BASE_DIR / "__not_public__")
 
     def do_GET(self):
-        if urlsplit(self.path).path == "/health":
+        route = urlsplit(self.path).path
+        if route == "/health":
             self._json_ok({"status": "ok"})
+            return
+        if route == "/api/journal":
+            self._journal_get()
             return
         super().do_GET()
 
+    def do_DELETE(self):
+        route = urlsplit(self.path).path
+        prefix = "/api/journal/entries/"
+        if not route.startswith(prefix) or route == prefix:
+            self._json_error(404, "Not Found")
+            return
+        if not self._same_origin():
+            self._json_error(403, "Journal writes must come from the NutriParse app")
+            return
+        entry_id = unquote(route[len(prefix):])
+        try:
+            document = store.delete_entry(self._store_path(), entry_id)
+        except store.EntryNotFound as error:
+            self._json_error(404, str(error))
+            return
+        except store.StoreError as error:
+            self._json_error(400, str(error))
+            return
+        except OSError as error:
+            LOGGER.warning("event=journal_write_failed error=%s", error)
+            self._json_error(500, "The journal could not be written")
+            return
+        self._json_ok(document)
+
     def do_POST(self):
         route = urlsplit(self.path).path
-        if route not in ("/api/suggest", "/api/parse", "/api/leftover-alchemist", "/api/recipe-image"):
+        if route not in ("/api/suggest", "/api/parse", "/api/leftover-alchemist",
+                         "/api/recipe-image") + JOURNAL_ROUTES:
             self._json_error(404, "Not Found")
             return
 
@@ -463,6 +495,10 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not isinstance(payload, dict):
             self._json_error(400, "JSON body must be an object")
+            return
+
+        if route in JOURNAL_ROUTES:
+            self._journal_write(route, payload)
             return
 
         if route == "/api/suggest":
@@ -568,6 +604,51 @@ class Handler(SimpleHTTPRequestHandler):
         )
         self._json_ok(result)
 
+    # ---------------------------------------------------------------- journal
+    # The browser and the CLI share one JSON document through store.py, so the
+    # web app keeps no second copy of the journal that could drift out of sync.
+    # Every write returns the whole document the server just saved.
+
+    def _store_path(self):
+        return self.server.store_path
+
+    def _same_origin(self):
+        """Refuse a journal write that some other site asked the browser to make."""
+        origin = self.headers.get("Origin")
+        if not origin:
+            # Same-origin requests may omit it, and the CLI never sends one.
+            return True
+        port = self.server.server_port
+        return urlsplit(origin).netloc.lower() in {
+            f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}",
+        }
+
+    def _journal_get(self):
+        try:
+            document = store.load(self._store_path())
+        except store.StoreError as error:
+            self._json_error(500, str(error))
+            return
+        self._json_ok(document)
+
+    def _journal_write(self, route, payload):
+        if not self._same_origin():
+            self._json_error(403, "Journal writes must come from the NutriParse app")
+            return
+        try:
+            if route == "/api/journal/entries":
+                document = store.add_entries(self._store_path(), payload.get("entries"))
+            else:
+                document = store.set_goal(self._store_path(), payload.get("calorie_goal"))
+        except store.StoreError as error:
+            self._json_error(400, str(error))
+            return
+        except OSError as error:
+            LOGGER.warning("event=journal_write_failed error=%s", error)
+            self._json_error(500, "The journal could not be written")
+            return
+        self._json_ok(document)
+
     def _send_json(self, code, data):
         body = json.dumps(data, allow_nan=False).encode("utf-8")
         self.send_response(code)
@@ -595,6 +676,7 @@ def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     server.daemon_threads = True
     server.env = load_env()
+    server.store_path = store.DEFAULT_PATH
     llm = resolve_llm(server.env, 30)
     if llm["provider"] == "openrouter" and not llm["api_key"]:
         print("Warning: OPENROUTER_API_KEY is not configured; AI features will fail.")
