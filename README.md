@@ -1,5 +1,7 @@
 ﻿# NutriParse
 
+**LLM Nutrition & Recipe Service**
+
 Turn free text about food into structured, validated nutrition data. A prompt-first web app and a command-line tool, with optional AI estimation and recipe generation from OpenRouter or any local OpenAI-compatible model.
 
 ## Features
