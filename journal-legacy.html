@@ -350,10 +350,10 @@ function renderRecipes(recipes){
     body.appendChild(uses);
 
     if(recipe.pantry_extras?.length){
-      const pantry=document.createElement('p'); pantry.className='recipe-ingredient-line';
-      addText(pantry,'strong','Pantry');
-      pantry.appendChild(document.createTextNode(' '+recipe.pantry_extras.join(', ')));
-      body.appendChild(pantry);
+      const extras=document.createElement('p'); extras.className='recipe-ingredient-line';
+      addText(extras,'strong','Extras');
+      extras.appendChild(document.createTextNode(' '+recipe.pantry_extras.join(', ')));
+      body.appendChild(extras);
     }
 
     const detail=document.createElement('div'); detail.className='recipe-detail';

@@ -5,6 +5,7 @@ __pycache__/
 logs/
 .vscode/
 data.json
+data.demo.json
 
 # Local design prototypes
 prototype-*
@@ -19,3 +20,6 @@ main.synctex.gz
 
 # Resume source and build output (kept local)
 resume/
+
+# Local virtual environment
+.venv/

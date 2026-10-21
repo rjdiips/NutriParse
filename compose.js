@@ -319,6 +319,8 @@ async function submit() {
     el.empty.hidden = true;
     el.cookSub.textContent = 'Consulting the leftovers…';
     el.cookNote.textContent = '';
+    el.cookInspector.open = false;
+    clearCallDetail(cookParts);
     el.recipeGrid.replaceChildren(skeletonCards(3));
     startTicker(() => {
       el.cookSub.textContent = `Generating three ideas… ${Math.round((Date.now() - started) / 1000)}s`;
@@ -397,6 +399,7 @@ async function submit() {
       el.result.hidden = true;
       state.items = [];
       el.rows.replaceChildren();
+      resetTotals();
     }
     syncPanels();
 
@@ -455,6 +458,22 @@ function showSkeleton() {
   }
   el.rows.replaceChildren(skeleton);
   el.save.disabled = true;
+  el.save.textContent = 'Save to journal';
+  // The previous parse's totals, macro split, and call detail are not part of
+  // the request in flight, so leaving them visible would read as the new result.
+  resetTotals();
+  clearCallDetail(estimateParts);
+  el.inspectorSummary.textContent = 'Request details';
+  el.inspectorRawLabel.textContent = 'Response JSON';
+}
+
+function resetTotals() {
+  [el.totalCalories, el.totalProtein, el.totalCarbs, el.totalFat]
+    .forEach((node) => { node.textContent = '—'; });
+  el.totalsNote.textContent = '';
+  el.macrobar.querySelectorAll('.macrobar__seg')
+    .forEach((seg) => { seg.style.width = '0%'; });
+  el.macrobar.removeAttribute('aria-label');
 }
 
 function renderItems(items, meta, payload, opts = {}) {
@@ -713,8 +732,8 @@ function buildRecipeCard(recipe, index, meta) {
 
   const uses = factLine('Uses', recipe.ingredients_used);
   if (uses) body.appendChild(uses);
-  const pantry = factLine('Pantry', recipe.pantry_extras);
-  if (pantry) body.appendChild(pantry);
+  const extras = factLine('Extras', recipe.pantry_extras);
+  if (extras) body.appendChild(extras);
 
   if (Array.isArray(recipe.steps) && recipe.steps.length) {
     const steps = document.createElement('ol');
@@ -844,6 +863,15 @@ function startManualRow() {
 }
 
 /* ---------- inspector ---------- */
+
+/* A request in flight has no call detail yet. Clear the last one so a panel
+   reopened during the wait cannot present stale numbers as the new result. */
+function clearCallDetail(parts) {
+  parts.chips.replaceChildren();
+  parts.grid.replaceChildren();
+  parts.raw.textContent = 'Waiting for the model…';
+  parts.copy.textContent = 'Copy';
+}
 
 function paintInspector(parts, meta, payload) {
   const chips = [];

@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# TestClient transport for the HTTP surface tests.
+httpx>=0.27,<1.0
