@@ -4,6 +4,14 @@
 
 Turn free text about food into structured, validated nutrition data. A prompt-first web app and a command-line tool, with optional AI estimation and recipe generation from OpenRouter or any local OpenAI-compatible model.
 
+<p align="center">
+  <img src="screenshots/compose-estimate.png" alt="NutriParse Compose view: the meal '2 rotis, dal, and a glass of lassi' parsed into three editable rows — Roti, Dal and Lassi — with calories, protein, carbs and fat, totalling 470 kcal">
+</p>
+
+<p align="center"><sub><b>Compose → Estimate.</b> One line in, one editable row per food out, totals recomputed from the rows you can see.</sub></p>
+
+Jump to: [Features](#features) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
+
 ## Features
 
 - **Compose** — describe a meal in one line and get one editable row per food, with server-recomputed totals and the full call detail behind the result (`/api/parse`)
@@ -18,9 +26,16 @@ Turn free text about food into structured, validated nutrition data. A prompt-fi
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
+- FastAPI and Uvicorn
 
-No extra packages are required; the backend uses only the Python standard library. Recipe images are optional and use a separate local service (see below).
+Install the backend dependencies once:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+The journal store and CLI need nothing beyond the standard library. Recipe images are optional and use a separate local service (see below).
 
 ## Usage
 
@@ -40,15 +55,38 @@ Follow the on-screen menu to track your intake. The CLI and the web app share on
 python server.py
 ```
 
-2. Open http://localhost:8000 in your browser.
+2. Open http://localhost:8000 in your browser. The same app also serves interactive API documentation at http://localhost:8000/docs.
 
 The app has two views, switched from the top bar.
 
 **Compose** is the prompt-first surface, with two intents sharing one input. **Estimate** turns a meal ("2 rotis, dal, and a glass of lassi") into one row per item; **Cook** turns an ingredient list into three recipe ideas with steps and per-serving macros. Every parsed name and number is editable, totals are summed server-side from the rows you can see, and **Request details** exposes the provider, model, latency, token counts, and the raw response JSON in both modes. Failures surface as typed messages with a retry, and images degrade to a labelled strip when the local service is off. **Add a row manually** seeds one blank editable row for numbers you already know; for that row the inspector reads *Pending save* and previews the payload the save will write, instead of implying a model call that never happened.
 
+<p align="center">
+  <img src="screenshots/cook-ideas.png" alt="NutriParse Cook view: the ingredients 'chai, chappati, dahi, ice-cream' turned into three recipe cards, each with a generated image, per-serving calories and macros, ingredient list and numbered steps">
+</p>
+
+<p align="center"><sub><b>Compose → Cook.</b> The other intent on the same surface: three ideas with per-serving macros and steps, plus the same call detail.</sub></p>
+
 **Journal** is the read side of the same store: today's calories against your goal, protein/carbs/fat totals and entry count, an editable goal with presets, history grouped by day with per-day totals, a search box, and a per-entry delete.
 
+<p align="center">
+  <img src="screenshots/journal.png" alt="NutriParse Journal view: 1,925 of 2,200 kcal for today with protein, carbs and fat totals, an editable daily goal, and history grouped by day with per-day totals">
+</p>
+
+<p align="center"><sub><b>Journal.</b> Today against the goal, macros to the gram, and history grouped by day — reading the same store the CLI writes to.</sub></p>
+
 Add `?sample=1` or `?sample=cook` to preview either resolved Compose state without a model call, and `?view=journal` to open the Journal view directly.
+
+### Demo data for screenshots
+
+`seed_demo.py` writes a week of sample entries to `data.demo.json`, dated relative to today, so the Journal view has a populated today card and several days of history — including one day over the goal and one light day. Your real `data.json` is never read or written. The Journal screenshot above came from this demo file.
+
+```powershell
+python seed_demo.py
+python server.py --demo
+```
+
+Open http://localhost:8000/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
 
 ### Where the journal lives
 
@@ -101,6 +139,17 @@ LLM_MODEL=qwen3.5:9b
 
 `LLM_BASE_URL` works with Ollama (`11434`), LM Studio (`1234`), and llama.cpp (`8080`). Local providers do not need an API key. `LLM_TIMEOUT` optionally overrides the request timeout in seconds (defaults: 30 for nutrition and 45 for recipes on OpenRouter, 180 for local models). Local requests disable thinking via `LLM_REASONING_EFFORT=none` and enable JSON mode through `response_format`, which keeps replies fast; set `LLM_REASONING_EFFORT=` empty or `LLM_JSON_MODE=false` if your server does not support them. Recipe images are unaffected and still use the local image service.
 
+<details>
+<summary><b>What a local call looks like in the inspector</b> — click to open</summary>
+
+<p align="center">
+  <img src="screenshots/request-details.png" alt="Request details panel: provider local, model qwen3.5:9b, 9,283 ms latency, 154 prompt tokens, 196 completion tokens, three items returned, and the raw response JSON">
+</p>
+
+Every Estimate and Cook result carries this panel: which provider answered, the model, the latency, both token counts, and the raw JSON. Nothing here is inferred from the UI state — it is the call as it happened.
+
+</details>
+
 Each LLM request is recorded in `logs/llm.log`, including its request ID, model,
 food and portion, duration, and success or failure. Logs rotate automatically
 after reaching 2 MB, keeping up to five older files. API credentials and raw
@@ -108,13 +157,14 @@ provider payloads are not logged.
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, atomic writes, legacy numeric ids, corrupt files, and concurrent writers:
+The journal store has a stdlib suite covering validation, atomic writes, legacy numeric ids, corrupt files, and concurrent writers. The FastAPI surface has a second suite covering the route allowlist, the journal round trip, body validation, and the same-origin check on writes:
 
 ```powershell
+python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests
 ```
 
-The HTTP surface and both front ends are exercised with scripts against a live server during development — API CRUD and validation, the route allowlist, and headless-browser runs of the Compose, Journal and Cook surfaces. Those live outside the repo; the store suite is the part that runs anywhere.
+Both front ends are also exercised with headless-browser runs of the Compose, Journal and Cook surfaces during development; those live outside the repo.
 
 ## Model evaluation
 
@@ -134,12 +184,16 @@ The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 202
 
 - `nutriparse.py` — command-line application source
 - `store.py` — the shared journal store: validation, atomic writes, totals, used by both the CLI and the server
-- `server.py` — stdlib HTTP server serving the app's public assets plus the journal, AI and image endpoints
+- `server.py` — FastAPI app serving the public assets plus the journal, AI and image endpoints
+- `requirements.txt` — backend dependencies (FastAPI, Uvicorn)
+- `requirements-dev.txt` — adds the HTTP test transport (`httpx`)
 - `compose.html`, `compose.css`, `compose.js` — the app: the Compose and Journal views, served at `/`
 - `journal-client.js` — the browser side of the journal API, including the one-time `localStorage` migration
 - `journal-legacy.html`, `journal-legacy.css` — the earlier editorial journal, retained as a working backup at `/journal-legacy.html`
-- `tests/` — store tests (`python -m unittest discover -s tests`)
+- `seed_demo.py` — writes `data.demo.json`, sample entries for screenshots; `server.py --demo` serves it instead of the real journal
+- `tests/` — store and FastAPI tests (`python -m unittest discover -s tests`)
 - `evals/` — the parse evaluation harness, its case fixtures, and the committed results
+- `screenshots/` — the screenshots used in this README
 - `data.json` — the journal, shared by the CLI and the web app (created on first write; ignored by Git)
 - `.env` — your OpenRouter API key (create from `.env.example`; do not commit)
 - `.env.example` — documented environment variables template
