@@ -1,0 +1,131 @@
+{
+  "description": "Meal-parsing cases for /api/parse, each with a reference calorie range assembled from standard food-composition data. The ranges are deliberately wide: portions in a free-text description are approximate, so a narrow 'ground truth' would be false precision.",
+  "sources": [
+    "USDA FoodData Central (fdc.nal.usda.gov), SR Legacy and Foundation Foods",
+    "IFCT 2017, Indian Food Composition Tables (NIN Hyderabad)",
+    "Label values for packaged items (soft drinks, pizza) where composition varies by brand"
+  ],
+  "notes": [
+    "kcal is per portion as described in the text, in kilocalories.",
+    "match lists the name fragments that identify this item in whatever the model returns, so a model that splits '2 rotis' into two rows is still credited correctly.",
+    "Where a description leaves cooking fat ambiguous, the range assumes a plain preparation and the basis says so."
+  ],
+  "cases": [
+    {
+      "id": "two-rotis-dal-lassi",
+      "text": "2 rotis, dal, and a glass of lassi",
+      "basis": "A 45 g whole-wheat roti is ~100-130 kcal; a katori (150 g) of cooked toor dal is ~120-180 kcal; a 250 ml glass of sweet lassi is ~120-200 kcal.",
+      "items": [
+        { "label": "Roti, 2 medium", "match": ["roti"], "kcal": [180, 260] },
+        { "label": "Dal, 1 katori", "match": ["dal"], "kcal": [120, 190] },
+        { "label": "Sweet lassi, 1 glass", "match": ["lassi"], "kcal": [120, 200] }
+      ]
+    },
+    {
+      "id": "leftover-rice-two-eggs",
+      "text": "leftover rice with two eggs and half a bell pepper",
+      "basis": "One cup (158 g) of cooked white rice is ~205 kcal; two large eggs are ~143 kcal; half a bell pepper is ~15 kcal. Plain preparation, no added fat.",
+      "items": [
+        { "label": "Cooked rice, 1 cup", "match": ["rice"], "kcal": [180, 260] },
+        { "label": "Eggs, 2 large", "match": ["egg"], "kcal": [130, 170] },
+        { "label": "Bell pepper, half", "match": ["pepper", "capsicum"], "kcal": [5, 30] }
+      ]
+    },
+    {
+      "id": "chicken-rice-broccoli",
+      "text": "100g grilled chicken breast, a cup of cooked white rice, and a cup of broccoli",
+      "basis": "100 g of grilled skinless chicken breast is ~165 kcal; one cup of cooked white rice is ~205 kcal; one cup of cooked broccoli is ~55 kcal.",
+      "items": [
+        { "label": "Grilled chicken breast, 100 g", "match": ["chicken"], "kcal": [140, 200] },
+        { "label": "Cooked white rice, 1 cup", "match": ["rice"], "kcal": [180, 260] },
+        { "label": "Broccoli, 1 cup", "match": ["broccoli"], "kcal": [40, 80] }
+      ]
+    },
+    {
+      "id": "cheese-omelette-toast",
+      "text": "a three-egg cheese omelette with two slices of buttered toast",
+      "basis": "Three eggs are ~215 kcal, 30 g of cheese ~110 kcal and the cooking butter ~35 kcal; two slices of white toast are ~160 kcal plus ~70 kcal of butter. A model is free to answer with one omelette row or with separate egg and cheese rows, so both spellings are accepted and the rows are summed.",
+      "items": [
+        { "label": "Three-egg cheese omelette", "match": ["omelette", "omelet", "egg", "cheese"], "kcal": [250, 400] },
+        { "label": "Buttered toast, 2 slices", "match": ["toast", "bread", "butter"], "kcal": [200, 300] }
+      ]
+    },
+    {
+      "id": "rice-and-two-eggs",
+      "text": "leftover rice with two eggs",
+      "basis": "One cup (158 g) of cooked white rice is ~205 kcal and two large eggs are ~143 kcal, for ~350 kcal plain. This is the case the model was suspected of scoring at 245-320 kcal.",
+      "items": [
+        { "label": "Cooked rice, 1 cup", "match": ["rice"], "kcal": [180, 260] },
+        { "label": "Eggs, 2 large", "match": ["egg"], "kcal": [130, 170] }
+      ]
+    },
+    {
+      "id": "chicken-biryani-plate",
+      "text": "one plate of chicken biryani",
+      "basis": "A restaurant plate of chicken biryani (roughly 350-450 g with a piece of chicken) is ~450-750 kcal depending on the rice-to-meat ratio and the ghee used. The wide range is the point: one 'plate' is not a measurement.",
+      "items": [
+        { "label": "Chicken biryani, 1 plate", "match": ["biryani"], "kcal": [450, 750] }
+      ]
+    },
+    {
+      "id": "masala-dosa-chutney",
+      "text": "a masala dosa with coconut chutney",
+      "basis": "A restaurant masala dosa with potato filling is ~250-400 kcal; a small bowl (50 g) of coconut chutney is ~40-90 kcal.",
+      "items": [
+        { "label": "Masala dosa", "match": ["dosa"], "kcal": [250, 400] },
+        { "label": "Coconut chutney", "match": ["chutney"], "kcal": [40, 90] }
+      ]
+    },
+    {
+      "id": "oatmeal-milk-honey",
+      "text": "a bowl of oatmeal with milk and a spoon of honey",
+      "basis": "40 g of dry rolled oats is ~150 kcal; 150 ml of semi-skimmed milk is ~70 kcal; a teaspoon of honey is ~20 kcal, a tablespoon ~60 kcal, so the range covers both readings.",
+      "items": [
+        { "label": "Oatmeal, 40 g dry", "match": ["oat", "porridge"], "kcal": [130, 200] },
+        { "label": "Milk, 150 ml", "match": ["milk"], "kcal": [50, 110] },
+        { "label": "Honey, 1 spoon", "match": ["honey"], "kcal": [20, 70] }
+      ]
+    },
+    {
+      "id": "one-banana",
+      "text": "one banana",
+      "basis": "A medium banana (118 g edible) is ~105 kcal.",
+      "items": [
+        { "label": "Banana, 1 medium", "match": ["banana"], "kcal": [85, 125] }
+      ]
+    },
+    {
+      "id": "two-samosas-chai",
+      "text": "two samosas and a cup of masala chai",
+      "basis": "A fried potato-and-pea samosa (60-80 g) is ~125-200 kcal depending on the pastry and the oil absorbed; a 150 ml cup of masala chai with milk and sugar is ~60-130 kcal.",
+      "items": [
+        { "label": "Samosas, 2", "match": ["samosa"], "kcal": [250, 400] },
+        { "label": "Masala chai, 1 cup", "match": ["chai", "tea"], "kcal": [60, 130] }
+      ]
+    },
+    {
+      "id": "two-pizza-slices",
+      "text": "two slices of pepperoni pizza",
+      "basis": "A slice of takeaway pepperoni pizza (roughly 110 g) is ~250-350 kcal, so two slices are ~500-700 kcal. Thin-crust slices sit at the bottom of that range.",
+      "items": [
+        { "label": "Pepperoni pizza, 2 slices", "match": ["pizza"], "kcal": [450, 700] }
+      ]
+    },
+    {
+      "id": "black-coffee-two-sugars",
+      "text": "black coffee with two teaspoons of sugar",
+      "basis": "Black coffee is ~2-5 kcal; two level teaspoons of sugar (8 g) are ~32 kcal. A small number on purpose: near-zero items are where percentage error stops meaning anything.",
+      "items": [
+        { "label": "Black coffee", "match": ["coffee"], "kcal": [0, 15] },
+        { "label": "Sugar, 2 teaspoons", "match": ["sugar"], "kcal": [25, 40] }
+      ]
+    },
+    {
+      "id": "not-food",
+      "text": "the quarterly budget review",
+      "refusal": true,
+      "basis": "Not a food. The service is expected to refuse rather than invent a meal, so this case has no calorie reference and passes only when the request is rejected.",
+      "items": []
+    }
+  ]
+}

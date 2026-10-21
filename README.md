@@ -13,7 +13,8 @@ Turn free text about food into structured, validated nutrition data. A prompt-fi
 - Every parsed name and number stays editable, and totals are recomputed from the rows you can see
 - Failures surface as typed messages with a retry; `?sample=1` previews a resolved result without a model call
 - Seven-day daily summary with progress toward the goal in the CLI
-- Data is persisted to `data.json` (CLI) or `localStorage` (web)
+- One journal store: the web app, the CLI, and the retained legacy journal all read and write the same `data.json` through `store.py`
+- A committed evaluation harness scores `/api/parse` against reference calorie ranges, so claims about the model's accuracy carry a table and a date
 
 ## Requirements
 
@@ -29,7 +30,7 @@ No extra packages are required; the backend uses only the Python standard librar
 python nutriparse.py
 ```
 
-Follow the on-screen menu to track your intake. The CLI keeps its own `data.json`; the web app keeps its entries in the browser's `localStorage`, so the two stores are independent. Option 6 (Suggest nutrition with AI) calls the backend server at `http://localhost:8000`, so start `server.py` first if you want to use it.
+Follow the on-screen menu to track your intake. The CLI and the web app share one journal (`data.json`, in this folder), so an entry saved in the browser shows up here and the other way round. Entries are read fresh on every command rather than held in memory, which is what makes that true. Option 6 (Suggest nutrition with AI) calls the backend server at `http://localhost:8000`, so start `server.py` first if you want to use it.
 
 ### Web interface
 
@@ -49,7 +50,20 @@ The app has two views, switched from the top bar.
 
 Add `?sample=1` or `?sample=cook` to preview either resolved Compose state without a model call, and `?view=journal` to open the Journal view directly.
 
-Saving writes entries to `localStorage` under `ct_data`. That is the same key and the same entry shape an earlier iteration of the app used, so the earlier editorial journal is retained as a working backup at http://localhost:8000/journal-legacy.html — it reads and writes the same store in both directions. Compose is the maintained surface; the legacy journal is there if you want the old layout back.
+### Where the journal lives
+
+The server owns `data.json`; the browser keeps no copy of its own. Saving in Compose posts to the server, every mutation answers with the whole updated document, and both views render from that answer. `store.py` holds the rules both front ends share — validation, id assignment, atomic writes — and the CLI calls it directly because it runs on the same machine as the file.
+
+| Endpoint | Body | Returns |
+| --- | --- | --- |
+| `GET /api/journal` | — | the whole document |
+| `POST /api/journal/entries` | `{"entries": [ … ]}` | the document including the new rows, each with a server-assigned id |
+| `DELETE /api/journal/entries/<id>` | — | the document without that row |
+| `POST /api/journal/goal` | `{"calorie_goal": 2200}` | the document with the new goal |
+
+Writes are validated before they touch the file and then swapped in atomically, so a crash mid-write cannot leave a half-written journal behind. A `data.json` that cannot be parsed is reported — HTTP 500 from the API, exit 1 from the CLI — rather than quietly replaced with a fresh one. Journal writes also check the request's `Origin` and refuse cross-site ones with 403; reads stay open because they change nothing.
+
+Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The earlier editorial journal is retained as a working backup at http://localhost:8000/journal-legacy.html and reads and writes the same store, so the old layout is still there if you want it. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so a CLI save racing a browser save is last-write-wins rather than a transaction.
 
 `/api/suggest` (single-food estimation, once behind the journal's "Suggest with AI" button) is still served and is still used by CLI option 6. The Compose surface uses `/api/parse` instead.
 
@@ -92,13 +106,41 @@ food and portion, duration, and success or failure. Logs rotate automatically
 after reaching 2 MB, keeping up to five older files. API credentials and raw
 provider payloads are not logged.
 
+## Tests
+
+The journal store has a stdlib suite covering validation, atomic writes, legacy numeric ids, corrupt files, and concurrent writers:
+
+```powershell
+python -m unittest discover -s tests
+```
+
+The HTTP surface and both front ends are exercised with scripts against a live server during development — API CRUD and validation, the route allowlist, and headless-browser runs of the Compose, Journal and Cook surfaces. Those live outside the repo; the store suite is the part that runs anywhere.
+
+## Model evaluation
+
+`evals/` holds a committed harness that scores `/api/parse` against fixed meals with reference calorie ranges. It exists because "the model under-counts" is an anecdote until it is measured, and because a prompt change needs something to compare against.
+
+```powershell
+python server.py                    # in one terminal
+python evals/run_parse_eval.py      # in another
+python evals/run_parse_eval.py --check-fixtures   # offline: validate the cases only
+```
+
+Thirteen cases, twelve with a calorie reference and one non-food refusal check. Each case carries per-item ranges and a `basis` naming the composition data behind them, and rows that a model splits are summed before comparison, so a correct split is not punished. The runner reports within-range rate, mean signed error (the bias), mean absolute error, item detection, refusals, latency and tokens, and writes `evals/results.md` plus the raw `evals/results.json`. See `evals/README.md` for the method and its limits.
+
+The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 2026): 10 of 12 scored meals landed inside their reference range, with a mean signed error of −4.4%. The aggregate hides the useful part, though. The errors are concentrated in energy-dense food — two slices of pepperoni pizza at 300 kcal against 450–700, two samosas and a chai at 240 against 310–530 — and a meal can total in range while an item inside it is wrong: "2 rotis, dal, and a lassi" lands at 470 kcal against 420–650, with the roti row at 140 kcal against 180–260. The same run also returned `one piece` for "two samosas", which is a portion bug rather than a calorie-estimate bug. Those per-item rows are the reason the harness exists.
+
 ## File layout
 
 - `nutriparse.py` — command-line application source
-- `server.py` — stdlib HTTP server serving the app's public assets plus the AI and image endpoints
+- `store.py` — the shared journal store: validation, atomic writes, totals, used by both the CLI and the server
+- `server.py` — stdlib HTTP server serving the app's public assets plus the journal, AI and image endpoints
 - `compose.html`, `compose.css`, `compose.js` — the app: the Compose and Journal views, served at `/`
+- `journal-client.js` — the browser side of the journal API, including the one-time `localStorage` migration
 - `journal-legacy.html`, `journal-legacy.css` — the earlier editorial journal, retained as a working backup at `/journal-legacy.html`
-- `data.json` — persisted entries and goal for the CLI (created on first run)
+- `tests/` — store tests (`python -m unittest discover -s tests`)
+- `evals/` — the parse evaluation harness, its case fixtures, and the committed results
+- `data.json` — the journal, shared by the CLI and the web app (created on first write; ignored by Git)
 - `.env` — your OpenRouter API key (create from `.env.example`; do not commit)
 - `.env.example` — documented environment variables template
 - `README.md` — this file

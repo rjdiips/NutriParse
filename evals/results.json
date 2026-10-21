@@ -1,0 +1,893 @@
+{
+  "run": {
+    "started_at": "2026-10-21T23:07:35",
+    "base_url": "http://127.0.0.1:8000",
+    "provider": "local",
+    "model": "qwen3.5:9b",
+    "repeat": 1,
+    "cases_file": "evals\\cases\\parse_cases.json"
+  },
+  "summary": {
+    "cases": 13,
+    "scored": 12,
+    "within_range": 10,
+    "within_range_rate": 0.8333333333333334,
+    "mean_signed_error_kcal": -37.208333333333336,
+    "mean_absolute_error_kcal": 60.541666666666664,
+    "mean_signed_error_pct": -4.4287591186906825,
+    "mean_absolute_pct_error": 15.439215428997068,
+    "median_absolute_pct_error": 8.36021505376344,
+    "items_expected": 25,
+    "items_found": 25,
+    "items_in_range": 20,
+    "mean_latency_ms": 7883.833333333333,
+    "prompt_tokens": 1820.0,
+    "completion_tokens": 1872.0,
+    "refusal_cases": 1,
+    "refusals_ok": 1,
+    "errored": 0
+  },
+  "records": [
+    {
+      "id": "two-rotis-dal-lassi",
+      "text": "2 rotis, dal, and a glass of lassi",
+      "status": 200,
+      "error": null,
+      "kcal": 470.0,
+      "reference": [
+        420.0,
+        650.0
+      ],
+      "delta": -65.0,
+      "delta_pct": -12.149532710280374,
+      "within_range": true,
+      "expected_items": 3,
+      "found_items": 3,
+      "items": [
+        {
+          "name": "Roti",
+          "portion": "2 pieces",
+          "kcal": 140.0
+        },
+        {
+          "name": "Dal",
+          "portion": "1 cup",
+          "kcal": 180.0
+        },
+        {
+          "name": "Lassi",
+          "portion": "1 glass",
+          "kcal": 150.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Roti, 2 medium",
+          "tokens": [
+            "roti"
+          ],
+          "kcal": 140.0,
+          "reference": [
+            180.0,
+            260.0
+          ],
+          "within_range": false,
+          "names": [
+            "Roti"
+          ]
+        },
+        {
+          "label": "Dal, 1 katori",
+          "tokens": [
+            "dal"
+          ],
+          "kcal": 180.0,
+          "reference": [
+            120.0,
+            190.0
+          ],
+          "within_range": true,
+          "names": [
+            "Dal"
+          ]
+        },
+        {
+          "label": "Sweet lassi, 1 glass",
+          "tokens": [
+            "lassi"
+          ],
+          "kcal": 150.0,
+          "reference": [
+            120.0,
+            200.0
+          ],
+          "within_range": true,
+          "names": [
+            "Lassi"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 9701,
+        "prompt_tokens": 154,
+        "completion_tokens": 196
+      }
+    },
+    {
+      "id": "leftover-rice-two-eggs",
+      "text": "leftover rice with two eggs and half a bell pepper",
+      "status": 200,
+      "error": null,
+      "kcal": 355.0,
+      "reference": [
+        315.0,
+        460.0
+      ],
+      "delta": -32.5,
+      "delta_pct": -8.387096774193548,
+      "within_range": true,
+      "expected_items": 3,
+      "found_items": 3,
+      "items": [
+        {
+          "name": "Rice",
+          "portion": "Leftover serving",
+          "kcal": 200.0
+        },
+        {
+          "name": "Eggs",
+          "portion": "2 whole eggs",
+          "kcal": 140.0
+        },
+        {
+          "name": "Bell Pepper",
+          "portion": "Half pepper",
+          "kcal": 15.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Cooked rice, 1 cup",
+          "tokens": [
+            "rice"
+          ],
+          "kcal": 200.0,
+          "reference": [
+            180.0,
+            260.0
+          ],
+          "within_range": true,
+          "names": [
+            "Rice"
+          ]
+        },
+        {
+          "label": "Eggs, 2 large",
+          "tokens": [
+            "egg"
+          ],
+          "kcal": 140.0,
+          "reference": [
+            130.0,
+            170.0
+          ],
+          "within_range": true,
+          "names": [
+            "Eggs"
+          ]
+        },
+        {
+          "label": "Bell pepper, half",
+          "tokens": [
+            "pepper",
+            "capsicum"
+          ],
+          "kcal": 15.0,
+          "reference": [
+            5.0,
+            30.0
+          ],
+          "within_range": true,
+          "names": [
+            "Bell Pepper"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 9563,
+        "prompt_tokens": 153,
+        "completion_tokens": 207
+      }
+    },
+    {
+      "id": "chicken-rice-broccoli",
+      "text": "100g grilled chicken breast, a cup of cooked white rice, and a cup of broccoli",
+      "status": 200,
+      "error": null,
+      "kcal": 425.0,
+      "reference": [
+        360.0,
+        540.0
+      ],
+      "delta": -25.0,
+      "delta_pct": -5.555555555555555,
+      "within_range": true,
+      "expected_items": 3,
+      "found_items": 3,
+      "items": [
+        {
+          "name": "Grilled Chicken Breast",
+          "portion": "100g",
+          "kcal": 165.0
+        },
+        {
+          "name": "Cooked White Rice",
+          "portion": "1 cup",
+          "kcal": 205.0
+        },
+        {
+          "name": "Broccoli",
+          "portion": "1 cup",
+          "kcal": 55.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Grilled chicken breast, 100 g",
+          "tokens": [
+            "chicken"
+          ],
+          "kcal": 165.0,
+          "reference": [
+            140.0,
+            200.0
+          ],
+          "within_range": true,
+          "names": [
+            "Grilled Chicken Breast"
+          ]
+        },
+        {
+          "label": "Cooked white rice, 1 cup",
+          "tokens": [
+            "rice"
+          ],
+          "kcal": 205.0,
+          "reference": [
+            180.0,
+            260.0
+          ],
+          "within_range": true,
+          "names": [
+            "Cooked White Rice"
+          ]
+        },
+        {
+          "label": "Broccoli, 1 cup",
+          "tokens": [
+            "broccoli"
+          ],
+          "kcal": 55.0,
+          "reference": [
+            40.0,
+            80.0
+          ],
+          "within_range": true,
+          "names": [
+            "Broccoli"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 9475,
+        "prompt_tokens": 162,
+        "completion_tokens": 208
+      }
+    },
+    {
+      "id": "cheese-omelette-toast",
+      "text": "a three-egg cheese omelette with two slices of buttered toast",
+      "status": 200,
+      "error": null,
+      "kcal": 585.0,
+      "reference": [
+        450.0,
+        700.0
+      ],
+      "delta": 10.0,
+      "delta_pct": 1.7391304347826086,
+      "within_range": true,
+      "expected_items": 2,
+      "found_items": 2,
+      "items": [
+        {
+          "name": "Egg",
+          "portion": "3 large eggs",
+          "kcal": 210.0
+        },
+        {
+          "name": "Cheese",
+          "portion": "1/4 cup shredded cheddar",
+          "kcal": 113.0
+        },
+        {
+          "name": "Toast",
+          "portion": "2 slices white bread",
+          "kcal": 160.0
+        },
+        {
+          "name": "Butter",
+          "portion": "2 slices (approx. 1 tbsp)",
+          "kcal": 102.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Three-egg cheese omelette",
+          "tokens": [
+            "omelette",
+            "omelet",
+            "egg",
+            "cheese"
+          ],
+          "kcal": 323.0,
+          "reference": [
+            250.0,
+            400.0
+          ],
+          "within_range": true,
+          "names": [
+            "Egg",
+            "Cheese"
+          ]
+        },
+        {
+          "label": "Buttered toast, 2 slices",
+          "tokens": [
+            "toast",
+            "bread",
+            "butter"
+          ],
+          "kcal": 262.0,
+          "reference": [
+            200.0,
+            300.0
+          ],
+          "within_range": true,
+          "names": [
+            "Toast",
+            "Butter"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 12550,
+        "prompt_tokens": 157,
+        "completion_tokens": 290
+      }
+    },
+    {
+      "id": "rice-and-two-eggs",
+      "text": "leftover rice with two eggs",
+      "status": 200,
+      "error": null,
+      "kcal": 361.0,
+      "reference": [
+        310.0,
+        430.0
+      ],
+      "delta": -9.0,
+      "delta_pct": -2.4324324324324325,
+      "within_range": true,
+      "expected_items": 2,
+      "found_items": 2,
+      "items": [
+        {
+          "name": "Rice",
+          "portion": "Typical serving of leftovers",
+          "kcal": 206.0
+        },
+        {
+          "name": "Eggs",
+          "portion": "Two large eggs",
+          "kcal": 155.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Cooked rice, 1 cup",
+          "tokens": [
+            "rice"
+          ],
+          "kcal": 206.0,
+          "reference": [
+            180.0,
+            260.0
+          ],
+          "within_range": true,
+          "names": [
+            "Rice"
+          ]
+        },
+        {
+          "label": "Eggs, 2 large",
+          "tokens": [
+            "egg"
+          ],
+          "kcal": 155.0,
+          "reference": [
+            130.0,
+            170.0
+          ],
+          "within_range": true,
+          "names": [
+            "Eggs"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 7647,
+        "prompt_tokens": 148,
+        "completion_tokens": 145
+      }
+    },
+    {
+      "id": "chicken-biryani-plate",
+      "text": "one plate of chicken biryani",
+      "status": 200,
+      "error": null,
+      "kcal": 650.0,
+      "reference": [
+        450.0,
+        750.0
+      ],
+      "delta": 50.0,
+      "delta_pct": 8.333333333333334,
+      "within_range": true,
+      "expected_items": 1,
+      "found_items": 1,
+      "items": [
+        {
+          "name": "Chicken Biryani",
+          "portion": "1 plate",
+          "kcal": 650.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Chicken biryani, 1 plate",
+          "tokens": [
+            "biryani"
+          ],
+          "kcal": 650.0,
+          "reference": [
+            450.0,
+            750.0
+          ],
+          "within_range": true,
+          "names": [
+            "Chicken Biryani"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 5078,
+        "prompt_tokens": 148,
+        "completion_tokens": 77
+      }
+    },
+    {
+      "id": "masala-dosa-chutney",
+      "text": "a masala dosa with coconut chutney",
+      "status": 200,
+      "error": null,
+      "kcal": 410.0,
+      "reference": [
+        290.0,
+        490.0
+      ],
+      "delta": 20.0,
+      "delta_pct": 5.128205128205129,
+      "within_range": true,
+      "expected_items": 2,
+      "found_items": 2,
+      "items": [
+        {
+          "name": "Masala Dosa",
+          "portion": "1 serving",
+          "kcal": 350.0
+        },
+        {
+          "name": "Coconut Chutney",
+          "portion": "1 tablespoon",
+          "kcal": 60.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Masala dosa",
+          "tokens": [
+            "dosa"
+          ],
+          "kcal": 350.0,
+          "reference": [
+            250.0,
+            400.0
+          ],
+          "within_range": true,
+          "names": [
+            "Masala Dosa"
+          ]
+        },
+        {
+          "label": "Coconut chutney",
+          "tokens": [
+            "chutney"
+          ],
+          "kcal": 60.0,
+          "reference": [
+            40.0,
+            90.0
+          ],
+          "within_range": true,
+          "names": [
+            "Coconut Chutney"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 7166,
+        "prompt_tokens": 151,
+        "completion_tokens": 137
+      }
+    },
+    {
+      "id": "oatmeal-milk-honey",
+      "text": "a bowl of oatmeal with milk and a spoon of honey",
+      "status": 200,
+      "error": null,
+      "kcal": 336.0,
+      "reference": [
+        200.0,
+        380.0
+      ],
+      "delta": 46.0,
+      "delta_pct": 15.862068965517242,
+      "within_range": true,
+      "expected_items": 3,
+      "found_items": 3,
+      "items": [
+        {
+          "name": "Oatmeal",
+          "portion": "1 bowl",
+          "kcal": 150.0
+        },
+        {
+          "name": "Milk",
+          "portion": "1 cup",
+          "kcal": 122.0
+        },
+        {
+          "name": "Honey",
+          "portion": "1 spoon",
+          "kcal": 64.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Oatmeal, 40 g dry",
+          "tokens": [
+            "oat",
+            "porridge"
+          ],
+          "kcal": 150.0,
+          "reference": [
+            130.0,
+            200.0
+          ],
+          "within_range": true,
+          "names": [
+            "Oatmeal"
+          ]
+        },
+        {
+          "label": "Milk, 150 ml",
+          "tokens": [
+            "milk"
+          ],
+          "kcal": 122.0,
+          "reference": [
+            50.0,
+            110.0
+          ],
+          "within_range": false,
+          "names": [
+            "Milk"
+          ]
+        },
+        {
+          "label": "Honey, 1 spoon",
+          "tokens": [
+            "honey"
+          ],
+          "kcal": 64.0,
+          "reference": [
+            20.0,
+            70.0
+          ],
+          "within_range": true,
+          "names": [
+            "Honey"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 9145,
+        "prompt_tokens": 154,
+        "completion_tokens": 193
+      }
+    },
+    {
+      "id": "one-banana",
+      "text": "one banana",
+      "status": 200,
+      "error": null,
+      "kcal": 105.0,
+      "reference": [
+        85.0,
+        125.0
+      ],
+      "delta": 0.0,
+      "delta_pct": 0.0,
+      "within_range": true,
+      "expected_items": 1,
+      "found_items": 1,
+      "items": [
+        {
+          "name": "Banana",
+          "portion": "one medium",
+          "kcal": 105.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Banana, 1 medium",
+          "tokens": [
+            "banana"
+          ],
+          "kcal": 105.0,
+          "reference": [
+            85.0,
+            125.0
+          ],
+          "within_range": true,
+          "names": [
+            "Banana"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 5099,
+        "prompt_tokens": 144,
+        "completion_tokens": 77
+      }
+    },
+    {
+      "id": "two-samosas-chai",
+      "text": "two samosas and a cup of masala chai",
+      "status": 200,
+      "error": null,
+      "kcal": 240.0,
+      "reference": [
+        310.0,
+        530.0
+      ],
+      "delta": -180.0,
+      "delta_pct": -42.857142857142854,
+      "within_range": false,
+      "expected_items": 2,
+      "found_items": 2,
+      "items": [
+        {
+          "name": "Samosa",
+          "portion": "one piece",
+          "kcal": 150.0
+        },
+        {
+          "name": "Masala Chai",
+          "portion": "one cup",
+          "kcal": 90.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Samosas, 2",
+          "tokens": [
+            "samosa"
+          ],
+          "kcal": 150.0,
+          "reference": [
+            250.0,
+            400.0
+          ],
+          "within_range": false,
+          "names": [
+            "Samosa"
+          ]
+        },
+        {
+          "label": "Masala chai, 1 cup",
+          "tokens": [
+            "chai",
+            "tea"
+          ],
+          "kcal": 90.0,
+          "reference": [
+            60.0,
+            130.0
+          ],
+          "within_range": true,
+          "names": [
+            "Masala Chai"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 7168,
+        "prompt_tokens": 152,
+        "completion_tokens": 135
+      }
+    },
+    {
+      "id": "two-pizza-slices",
+      "text": "two slices of pepperoni pizza",
+      "status": 200,
+      "error": null,
+      "kcal": 300.0,
+      "reference": [
+        450.0,
+        700.0
+      ],
+      "delta": -275.0,
+      "delta_pct": -47.82608695652174,
+      "within_range": false,
+      "expected_items": 1,
+      "found_items": 1,
+      "items": [
+        {
+          "name": "Pepperoni Pizza",
+          "portion": "2 slices",
+          "kcal": 300.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Pepperoni pizza, 2 slices",
+          "tokens": [
+            "pizza"
+          ],
+          "kcal": 300.0,
+          "reference": [
+            450.0,
+            700.0
+          ],
+          "within_range": false,
+          "names": [
+            "Pepperoni Pizza"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 5129,
+        "prompt_tokens": 148,
+        "completion_tokens": 77
+      }
+    },
+    {
+      "id": "black-coffee-two-sugars",
+      "text": "black coffee with two teaspoons of sugar",
+      "status": 200,
+      "error": null,
+      "kcal": 54.0,
+      "reference": [
+        25.0,
+        55.0
+      ],
+      "delta": 14.0,
+      "delta_pct": 35.0,
+      "within_range": true,
+      "expected_items": 2,
+      "found_items": 2,
+      "items": [
+        {
+          "name": "Black Coffee",
+          "portion": "1 cup",
+          "kcal": 2.0
+        },
+        {
+          "name": "Sugar",
+          "portion": "2 teaspoons",
+          "kcal": 52.0
+        }
+      ],
+      "matches": [
+        {
+          "label": "Black coffee",
+          "tokens": [
+            "coffee"
+          ],
+          "kcal": 2.0,
+          "reference": [
+            0.0,
+            15.0
+          ],
+          "within_range": true,
+          "names": [
+            "Black Coffee"
+          ]
+        },
+        {
+          "label": "Sugar, 2 teaspoons",
+          "tokens": [
+            "sugar"
+          ],
+          "kcal": 52.0,
+          "reference": [
+            25.0,
+            40.0
+          ],
+          "within_range": false,
+          "names": [
+            "Sugar"
+          ]
+        }
+      ],
+      "meta": {
+        "provider": "local",
+        "model": "qwen3.5:9b",
+        "elapsed_ms": 6885,
+        "prompt_tokens": 149,
+        "completion_tokens": 130
+      }
+    },
+    {
+      "id": "not-food",
+      "text": "the quarterly budget review",
+      "status": 502,
+      "error": "AI did not find any food in that description",
+      "kcal": null,
+      "reference": null,
+      "delta": null,
+      "delta_pct": null,
+      "within_range": null,
+      "expected_items": 0,
+      "found_items": 0,
+      "items": [],
+      "matches": [],
+      "meta": null,
+      "refused": true
+    }
+  ]
+}
