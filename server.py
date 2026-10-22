@@ -44,6 +44,8 @@ STATIC_FILES = {
     "/journal-client.js": "journal-client.js",
     "/journal-legacy.html": "journal-legacy.html",
     "/journal-legacy.css": "journal-legacy.css",
+    "/favicon.svg": "favicon.svg",
+    "/favicon.ico": "favicon.ico",
 }
 DEFAULT_LOCAL_BASE_URL = "http://localhost:11434/v1"
 DEFAULT_LOCAL_MODEL = "qwen3.5:9b"
@@ -461,6 +463,8 @@ MEDIA_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
 }
 
 
