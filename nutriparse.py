@@ -12,7 +12,7 @@ DATA_FILE = store.DEFAULT_PATH
 MEALS = store.MEALS
 MACROS = ["protein", "carbs", "fat"]
 
-SUGGEST_URL = "http://localhost:8000/api/suggest"
+SUGGEST_URL = "http://localhost:8100/api/suggest"
 
 CALORIE_GOAL_KEY = "calorie_goal"
 ENTRIES_KEY = "entries"

@@ -62,7 +62,7 @@ The journal store and CLI need nothing beyond the standard library. Recipe image
 python nutriparse.py
 ```
 
-Follow the on-screen menu to track your intake. The CLI and the web app share one journal (`data.json`, in this folder), so an entry saved in the browser shows up here and the other way round. Entries are read fresh on every command rather than held in memory, which is what makes that true. Option 6 (Suggest nutrition with AI) calls the backend server at `http://localhost:8000`, so start `server.py` first if you want to use it.
+Follow the on-screen menu to track your intake. The CLI and the web app share one journal (`data.json`, in this folder), so an entry saved in the browser shows up here and the other way round. Entries are read fresh on every command rather than held in memory, which is what makes that true. Option 6 (Suggest nutrition with AI) calls the backend server at `http://localhost:8100`, so start `server.py` first if you want to use it.
 
 ### Web interface
 
@@ -72,7 +72,7 @@ Follow the on-screen menu to track your intake. The CLI and the web app share on
 python server.py
 ```
 
-2. Open http://localhost:8000 in your browser. The same app also serves interactive API documentation at http://localhost:8000/docs.
+2. Open http://localhost:8100 in your browser. The same app also serves interactive API documentation at http://localhost:8100/docs.
 
 The app has two views, switched from the top bar.
 
@@ -103,7 +103,7 @@ python seed_demo.py
 python server.py --demo
 ```
 
-Open http://localhost:8000/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
+Open http://localhost:8100/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
 
 ### Where the journal lives
 
@@ -118,7 +118,7 @@ The server owns `data.json`; the browser keeps no copy of its own. Saving in Com
 
 Writes are validated before they touch the file and then swapped in atomically, so a crash mid-write cannot leave a half-written journal behind. A `data.json` that cannot be parsed is reported — HTTP 500 from the API, exit 1 from the CLI — rather than quietly replaced with a fresh one. Journal writes also check the request's `Origin` and refuse cross-site ones with 403; reads stay open because they change nothing.
 
-Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The earlier editorial journal is retained as a working backup at http://localhost:8000/journal-legacy.html and reads and writes the same store, so the old layout is still there if you want it. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so a CLI save racing a browser save is last-write-wins rather than a transaction.
+Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The earlier editorial journal is retained as a working backup at http://localhost:8100/journal-legacy.html and reads and writes the same store, so the old layout is still there if you want it. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so a CLI save racing a browser save is last-write-wins rather than a transaction.
 
 `/api/suggest` (single-food estimation, once behind the journal's "Suggest with AI" button) is still served and is still used by CLI option 6. The Compose surface uses `/api/parse` instead.
 

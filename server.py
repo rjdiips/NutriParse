@@ -28,7 +28,7 @@ import store
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = "localhost"
-PORT = 8000
+PORT = 8100
 ENV_FILE = BASE_DIR / ".env"
 LOG_DIR = BASE_DIR / "logs"
 LOG_FILE = LOG_DIR / "llm.log"

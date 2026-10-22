@@ -34,7 +34,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from store import number  # noqa: E402 - the path insert above has to come first
 
 CASES_FILE = EVAL_DIR / "cases" / "parse_cases.json"
-DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_BASE_URL = "http://127.0.0.1:8100"
 PARSE_PATH = "/api/parse"
 
 

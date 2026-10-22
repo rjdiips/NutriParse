@@ -7,7 +7,7 @@ varied set of days (one over goal, one light) to photograph.
 
     python seed_demo.py
     python server.py --demo
-    http://localhost:8000/?view=journal
+    http://localhost:8100/?view=journal
 
 Re-run the seed whenever the dates should move up to the current day.
 """
@@ -128,7 +128,7 @@ def main():
     days = len({entry["date"] for entry in document["entries"]})
     print(f"Wrote {len(document['entries'])} entries across {days} days to {DEMO_PATH.name}.")
     print(f"Daily goal: {document['calorie_goal']} kcal")
-    print("Next: python server.py --demo, then http://localhost:8000/?view=journal")
+    print("Next: python server.py --demo, then http://localhost:8100/?view=journal")
 
 
 if __name__ == "__main__":

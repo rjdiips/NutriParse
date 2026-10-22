@@ -43,7 +43,7 @@ class ApiTestCase(unittest.TestCase):
         server.app.state.env = {}
         # Pin the mtime so a request does not treat the real .env as a change.
         server.app.state.env_mtime = server.env_file_mtime()
-        self.client = TestClient(server.app, base_url="http://localhost:8000")
+        self.client = TestClient(server.app, base_url="http://localhost:8100")
 
     def _restore_state(self):
         (server.app.state.store_path,
@@ -90,7 +90,7 @@ class TestJournal(ApiTestCase):
         created = self.client.post(
             "/api/journal/entries",
             json={"entries": [self.entry()]},
-            headers={"Origin": "http://localhost:8000"},
+            headers={"Origin": "http://localhost:8100"},
         )
         self.assertEqual(created.status_code, 200)
         document = created.json()
@@ -104,7 +104,7 @@ class TestJournal(ApiTestCase):
         goal = self.client.post(
             "/api/journal/goal",
             json={"calorie_goal": 2200},
-            headers={"Origin": "http://localhost:8000"},
+            headers={"Origin": "http://localhost:8100"},
         )
         self.assertEqual(goal.status_code, 200)
         self.assertEqual(goal.json()["calorie_goal"], 2200)
@@ -126,7 +126,7 @@ class TestJournal(ApiTestCase):
         response = self.client.post(
             "/api/journal/entries",
             json={"entries": [self.entry(meal="brunch")]},
-            headers={"Origin": "http://localhost:8000"},
+            headers={"Origin": "http://localhost:8100"},
         )
         self.assert_error(response, 400, "Meal must be one of: breakfast, lunch, dinner, snack.")
 
