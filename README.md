@@ -10,7 +10,7 @@ Turn free text about food into structured, validated nutrition data. A prompt-fi
 
 <p align="center"><sub><b>Compose → Estimate.</b> One line in, one editable row per food out, totals recomputed from the rows you can see.</sub></p>
 
-Jump to: [Features](#features) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
+Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
 
 ## Features
 
@@ -23,6 +23,23 @@ Jump to: [Features](#features) · [Web interface](#web-interface) · [Local mode
 - Seven-day daily summary with progress toward the goal in the CLI
 - One journal store: the web app, the CLI, and the retained legacy journal all read and write the same `data.json` through `store.py`
 - A committed evaluation harness scores `/api/parse` against reference calorie ranges, so claims about the model's accuracy carry a table and a date
+
+## Tech stack
+
+| Layer | What NutriParse uses |
+| --- | --- |
+| Language | Python 3.10+ for the API, CLI, store, and evaluation harness; vanilla JavaScript in the browser |
+| Backend | FastAPI on Uvicorn, with Starlette and Pydantic underneath |
+| Frontend | HTML5, CSS, and plain JavaScript — no framework, bundler, or build step |
+| API surface | REST/JSON endpoints for parsing, cooking, suggestions, recipe images, and journal CRUD |
+| LLM providers | OpenRouter by default; any OpenAI-compatible endpoint, including Ollama, LM Studio, and llama.cpp |
+| Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
+| Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a process-level lock — no database |
+| Configuration | `.env` read by the backend, with process environment variables taking priority |
+| Testing | Python `unittest` for the store and FastAPI routes; `httpx` provides the `TestClient` transport |
+| Evaluation | A committed harness in `evals/` with fixed meal fixtures, reference calorie ranges, and Markdown/JSON results |
+| Logging | Python `logging` with a 2 MB rotating handler at `logs/llm.log`, keeping five backups |
+| Tooling | pip with `requirements.txt` / `requirements-dev.txt`; Windows batch scripts for the optional CUDA image service |
 
 ## Requirements
 
