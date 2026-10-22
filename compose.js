@@ -676,21 +676,25 @@ function buildRecipeCard(recipe, index, meta) {
   card.className = 'recipe';
   card.dataset.recipeIndex = String(index);
 
-  const media = document.createElement('div');
-  media.className = 'recipe__media';
-  if (recipe.image) {
-    const img = document.createElement('img');
-    img.src = recipe.image;
-    img.alt = recipe.title;
-    media.dataset.state = 'ready';
-    media.appendChild(img);
-  } else if (recipe.image_pending) {
-    media.dataset.state = 'loading';
-  } else {
-    media.dataset.state = 'unavailable';
-    media.appendChild(mediaNote('No image'));
+  // Skip the media frame entirely when images are switched off, so cards do not
+  // carry an empty "NO IMAGE" strip.
+  if (!recipe.image_unavailable) {
+    const media = document.createElement('div');
+    media.className = 'recipe__media';
+    if (recipe.image) {
+      const img = document.createElement('img');
+      img.src = recipe.image;
+      img.alt = recipe.title;
+      media.dataset.state = 'ready';
+      media.appendChild(img);
+    } else if (recipe.image_pending) {
+      media.dataset.state = 'loading';
+    } else {
+      media.dataset.state = 'unavailable';
+      media.appendChild(mediaNote('No image'));
+    }
+    card.appendChild(media);
   }
-  card.appendChild(media);
 
   const body = document.createElement('div');
   body.className = 'recipe__body';
@@ -736,14 +740,23 @@ function buildRecipeCard(recipe, index, meta) {
   if (extras) body.appendChild(extras);
 
   if (Array.isArray(recipe.steps) && recipe.steps.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'recipe__stepsWrap';
     const steps = document.createElement('ol');
     steps.className = 'recipe__steps';
+    steps.tabIndex = 0;
+    steps.setAttribute('aria-label', 'Cooking steps');
     recipe.steps.forEach((step) => {
       const li = document.createElement('li');
       li.textContent = step;
       steps.appendChild(li);
     });
-    body.appendChild(steps);
+    steps.addEventListener('scroll', () => paintStepsOverflow(steps), { passive: true });
+    wrap.appendChild(steps);
+    body.appendChild(wrap);
+    // The steps list is height-capped, so flag whether it is scrolled to the
+    // end; the fade that hints at more content is driven by this attribute.
+    requestAnimationFrame(() => paintStepsOverflow(steps));
   }
 
   const add = document.createElement('button');
@@ -776,11 +789,22 @@ function mediaNote(text) {
   return note;
 }
 
+function paintStepsOverflow(steps) {
+  const wrap = steps.parentElement;
+  if (!wrap) return;
+  const more = steps.scrollHeight - steps.clientHeight - steps.scrollTop > 4;
+  wrap.dataset.overflow = more ? 'more' : 'end';
+}
+
+function repaintStepsOverflow() {
+  el.recipeGrid.querySelectorAll('.recipe__steps').forEach(paintStepsOverflow);
+}
+
 async function loadRecipeImage(recipe, index) {
   const media = el.recipeGrid.querySelector(`[data-recipe-index="${index}"] .recipe__media`);
   if (!media) return;
 
-  if (!recipe.image_pending) {
+  if (recipe.image_unavailable || !recipe.image_pending) {
     media.dataset.state = 'unavailable';
     media.replaceChildren(mediaNote('No image'));
     return;
@@ -1298,6 +1322,17 @@ function showSample(mode) {
 
 el.resultTitle.tabIndex = -1;
 el.cookTitle.tabIndex = -1;
+
+// Card widths change with the grid, which changes how far the step lists
+// scroll, so recheck the overflow fade whenever the layout reflows.
+let stepsReflowFrame = 0;
+window.addEventListener('resize', () => {
+  if (stepsReflowFrame) return;
+  stepsReflowFrame = requestAnimationFrame(() => {
+    stepsReflowFrame = 0;
+    repaintStepsOverflow();
+  });
+});
 
 async function boot() {
   const params = new URLSearchParams(location.search);
