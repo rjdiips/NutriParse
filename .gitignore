@@ -1,4 +1,5 @@
 .image-tools/
+.llm-tools/
 models/
 __pycache__/
 .env

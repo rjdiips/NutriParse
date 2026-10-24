@@ -1,30 +1,30 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NutriParse — Journal (earlier iteration)</title>
+<title>The Food Journal — Journal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@400..800&display=swap" rel="stylesheet" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="journal-legacy.css" />
+<link rel="stylesheet" href="food-journal.css" />
 </head>
 <body>
 <div class="a-page">
   <header class="a-header">
     <div class="a-header__meta"><span>Vol. I &mdash; A daily record</span><span id="headerDate"></span></div>
-    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">NutriParse</div><span class="a-masthead__rule"></span></div>
+    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">The Food Journal</div><span class="a-masthead__rule"></span></div>
     <p class="a-tagline">A daily record of what nourishes you &mdash; kept gently, read often.</p>
   </header>
 
   <nav class="a-nav" role="tablist" aria-label="Sections">
     <button id="tab-summary" class="tab a-nav__item active" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary"><span class="a-nav__num">01</span>Today</button>
-    <button id="tab-add" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-add" data-tab="add"><span class="a-nav__num">02</span>Add Entry</button>
-    <button id="tab-entries" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-entries" data-tab="entries"><span class="a-nav__num">03</span>History</button>
-    <button id="tab-goal" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-goal" data-tab="goal"><span class="a-nav__num">04</span>Goal</button>
-    <button id="tab-alchemist" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-alchemist" data-tab="alchemist"><span class="a-nav__num">05</span>Alchemist</button>
+    <button id="tab-add" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-add" data-tab="add"><span class="a-nav__num">02</span>Log a meal</button>
+    <button id="tab-alchemist" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-alchemist" data-tab="alchemist"><span class="a-nav__num">03</span>Create a meal</button>
+    <button id="tab-entries" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-entries" data-tab="entries"><span class="a-nav__num">04</span>History</button>
+    <button id="tab-goal" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-goal" data-tab="goal"><span class="a-nav__num">05</span>Goal</button>
   </nav>
 
   <main class="a-main">
@@ -39,6 +39,7 @@
             <div class="a-progress__bar" role="progressbar" aria-label="Today's calorie goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="todayProgressBar" style="width:0%"></i></div>
             <div class="a-progress__meta"><span id="todayPct">0% of daily target</span><span id="todayRemaining">2,000 left</span></div>
           </div>
+          <p class="a-start-here">Start here: <button type="button" data-tab="add">log what you ate</button>, or <button type="button" data-tab="alchemist">create a meal</button> to save a recipe.</p>
         </div>
         <div class="a-lead__plate">
           <div class="macro-plate" id="macroPlate" role="img" aria-label="Today's macro split">
@@ -76,21 +77,23 @@
         <div class="a-log__intro">
           <span class="kicker">Add to the record</span>
           <h1 class="a-display">What did<br /><em>you</em> eat?</h1>
-          <p class="a-deck">A few honest numbers are enough. Estimates are welcome; precision is not the point.</p>
-          <div class="a-log__note"><span class="kicker">A note</span>
+          <p class="a-deck">Write it plainly, the way you&rsquo;d tell a friend. The model splits your words into foods, and every number stays editable before it reaches the record.</p>
+          <div class="a-editorial-note"><span class="kicker">A note</span>
             <p>Log the thing you actually ate, not the thing you meant to. The record is more useful that way.</p>
           </div>
         </div>
 
-        <form class="a-form" id="entryForm" autocomplete="off" novalidate>
-          <div class="a-form__grid">
-            <label class="field field--full" for="name"><span>Food name</span><input id="name" autocomplete="name" placeholder="e.g. Oat &amp; pear porridge" /></label>
-            <label class="field field--full" for="portion"><span>Portion</span><input id="portion" placeholder="e.g. 1 slice, 100g, 250ml, 1 cup" autocomplete="off" /></label>
-            <label class="field" for="calories"><span>Calories</span><input id="calories" type="number" min="0" autocomplete="off" placeholder="0" /></label>
-            <label class="field" for="protein"><span>Protein (g)</span><input id="protein" type="number" min="0" autocomplete="off" placeholder="0" /></label>
-            <label class="field" for="carbs"><span>Carbs (g)</span><input id="carbs" type="number" min="0" autocomplete="off" placeholder="0" /></label>
-            <label class="field" for="fat"><span>Fat (g)</span><input id="fat" type="number" min="0" autocomplete="off" placeholder="0" /></label>
-            <div class="field field--full"><span>Meal</span>
+        <div class="a-compose">
+          <label class="field a-compose__field" for="mealText"><span>Describe the plate <small class="a-compose__count"><span id="mealCount">0</span>/500</small></span><textarea id="mealText" rows="3" maxlength="500" placeholder="e.g. 2 rotis, dal, and a glass of lassi"></textarea></label>
+          <div class="a-examples" aria-label="Example descriptions">
+            <span class="kicker">Try</span>
+            <button type="button" class="a-example" data-example="2 rotis, dal, and a glass of lassi">2 rotis, dal, lassi</button>
+            <button type="button" class="a-example" data-example="leftover rice with 2 eggs and half a bell pepper">rice, eggs, pepper</button>
+            <button type="button" class="a-example" data-example="chicken shawarma roll and a coke">shawarma roll</button>
+          </div>
+          <div class="a-compose__meta">
+            <div class="field">
+              <span>Meal</span>
               <div class="a-meals" role="group" aria-label="Meal">
                 <button type="button" class="meal-chip active" aria-pressed="true" data-meal="breakfast" title="Breakfast"><span class="meal-emoji" aria-hidden="true">🍳</span><span>Breakfast</span></button>
                 <button type="button" class="meal-chip" aria-pressed="false" data-meal="lunch" title="Lunch"><span class="meal-emoji" aria-hidden="true">🥗</span><span>Lunch</span></button>
@@ -98,18 +101,52 @@
                 <button type="button" class="meal-chip" aria-pressed="false" data-meal="snack" title="Snack"><span class="meal-emoji" aria-hidden="true">🍎</span><span>Snack</span></button>
               </div>
             </div>
-            <label class="field field--full" for="date"><span>Date</span><input id="date" type="date" /></label>
+            <label class="field field--date" for="date"><span>Date</span><input id="date" type="date" /></label>
           </div>
-          <div class="a-form__foot">
-            <button type="button" id="addBtn" class="btn-ink">Add entry</button>
-            <button type="button" id="suggestBtn" class="btn-line">✨ Suggest with AI</button>
-            <span class="suggest-info-wrap">
-              <button type="button" class="suggest-info" aria-label="About AI suggestions" aria-describedby="suggestHelp">i</button>
-              <span class="suggest-help" id="suggestHelp" role="tooltip">Estimates calories, protein, carbs, and fat from the food name and portion.</span>
-            </span>
-            <span class="a-form__hint">A little precision, gently kept.</span>
+          <div class="a-compose__foot">
+            <div class="a-compose__actions">
+              <button type="button" id="parseBtn" class="btn-ink">Estimate nutrition</button>
+            </div>
           </div>
-        </form>
+          <p class="a-parse-error" id="parseError" role="alert" hidden></p>
+        </div>
+
+        <section id="parseResult" class="a-result" aria-labelledby="resultTitle" hidden>
+          <div class="a-result__head">
+            <div>
+              <span class="kicker" id="resultKicker">The plate</span>
+              <h2 class="a-result__title" id="resultTitle" tabindex="-1">The plate, itemised.</h2>
+              <p class="a-result__sub" id="resultSub"></p>
+            </div>
+            <button type="button" id="clearParsedBtn" class="text-btn">Discard</button>
+          </div>
+
+          <div class="a-grid a-grid--head" aria-hidden="true">
+            <span>Item</span><span>Portion</span><span class="num">Calories</span><span class="num">Protein (g)</span><span class="num">Carbs (g)</span><span class="num">Fat (g)</span><span></span>
+          </div>
+          <div id="parsedRows" class="a-parsed-rows"></div>
+          <div class="a-grid a-totals">
+            <span class="a-totals__label">Total<small id="totalsNote"></small></span>
+            <span aria-hidden="true"></span>
+            <strong class="num" id="totalCalories">0</strong>
+            <strong class="num" id="totalProtein">0</strong>
+            <strong class="num" id="totalCarbs">0</strong>
+            <strong class="num" id="totalFat">0</strong>
+            <span aria-hidden="true"></span>
+          </div>
+          <div class="a-macrobar" id="parsedMacrobar" aria-hidden="true">
+            <span data-macro="p"></span><span data-macro="c"></span><span data-macro="f"></span>
+          </div>
+          <p class="a-result__meta" id="macroLegend"></p>
+
+          <div class="a-result__foot">
+            <span class="a-result__hint">Estimates, not measurements. Edit anything.</span>
+            <div class="a-result__actions">
+              <button type="button" id="manualRowBtn" class="text-btn">Add a row by hand</button>
+              <button type="button" id="saveParsedBtn" class="btn-ink">Save to the record</button>
+            </div>
+          </div>
+        </section>
       </section>
     </div>
 
@@ -125,7 +162,7 @@
         <div id="emptyState" class="a-empty-state">
           <span class="kicker">No entries yet</span>
           <p>Log your first meal to begin the record.</p>
-          <button type="button" class="btn-line" data-tab="add">Add an entry &rarr;</button>
+          <button type="button" class="btn-line" data-tab="add">Log a meal &rarr;</button>
         </div>
         <p id="noResults" class="a-empty" hidden>No entries match that search.</p>
       </section>
@@ -160,27 +197,35 @@
         <div class="a-alch__grid">
           <div>
             <span class="kicker">The fridge is a laboratory</span>
-            <h1 class="a-display">Leftover<br /><em>alchemist.</em></h1>
+            <h1 class="a-display">Tell us what&rsquo;s<br /><em>in your fridge.</em></h1>
             <p class="a-deck">Name your ingredients. I&rsquo;ll turn them into something less mysterious than &ldquo;bits in a bowl.&rdquo;</p>
+            <div class="a-editorial-note"><span class="kicker">A note</span>
+              <p>Start with what you have. The ideas are suggestions; make them your own.</p>
+            </div>
           </div>
           <div class="a-alch__panel">
-            <label class="field" for="alchemistIngredients"><span>What have you got?</span><textarea id="alchemistIngredients" maxlength="500" placeholder="e.g. cooked rice, eggs, half a bell pepper, spinach"></textarea></label>
+            <label class="field a-alch__counted-field" for="alchemistIngredients"><span>What have you got? <small class="a-compose__count"><span id="alchemistIngredientsCount">0</span>/500</small></span><textarea id="alchemistIngredients" maxlength="500" placeholder="e.g. cooked rice, eggs, half a bell pepper, spinach"></textarea></label>
+            <div class="a-examples" aria-label="Ingredient examples">
+              <span class="kicker">Try</span>
+              <button type="button" class="a-example" data-ingredients="cooked rice, eggs, half a bell pepper, spinach">rice, eggs, pepper</button>
+              <button type="button" class="a-example" data-ingredients="chickpeas, tomatoes, cucumber, red onion, lemon">chickpeas, tomato, cucumber</button>
+              <button type="button" class="a-example" data-ingredients="oats, banana, peanut butter, milk">oats, banana, peanut butter</button>
+            </div>
             <label class="field" for="alchemistUseSoon"><span>Anything to use soon? <i>(optional)</i></span><input id="alchemistUseSoon" maxlength="500" placeholder="e.g. spinach is looking dramatic" /></label>
             <div class="a-alch__actions">
-              <button id="conjureBtn" class="btn-ink" type="button">Conjure recipes</button>
-              <span id="alchemistStatus" class="a-status" role="status" aria-live="polite">Enter a few ingredients to get started.</span>
+              <button id="conjureBtn" class="btn-ink" type="button">Create a meal</button>
+              <span id="alchemistStatus" class="a-status" role="status" aria-live="polite">Name a few ingredients to get started.</span>
             </div>
           </div>
         </div>
         <div class="a-alch__results">
-          <div class="a-section__head"><span class="kicker">Three ideas</span><span class="a-section__note">Per serving, approximate</span></div>
           <div id="recipeResults" class="recipe-grid" aria-live="polite"></div>
         </div>
       </section>
     </div>
   </main>
 
-  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>NutriParse &middot; Journal, earlier iteration &middot; <a class="a-footer__link" href="/">Back to Compose &rarr;</a></span></footer>
+  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>The Food Journal &middot; Meals, noted</span></footer>
 </div>
 
 <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
@@ -232,35 +277,26 @@ function activateTab(name){
   document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
   active.classList.add('active'); active.setAttribute('aria-selected','true');
   document.getElementById('panel-'+name).classList.add('active');
-  document.title='NutriParse - '+active.textContent.trim().replace(/^\d{2}/,'');
+  document.title='The Food Journal — '+active.textContent.trim().replace(/^\d{2}/,'');
   render();
 }
 
 document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>activateTab(el.dataset.tab)));
 
-function setFields(name, calories, protein, carbs, fat){
-  document.getElementById('name').value=name;
-  document.getElementById('calories').value=calories;
-  document.getElementById('protein').value=protein;
-  document.getElementById('carbs').value=carbs;
-  document.getElementById('fat').value=fat;
-}
-
-async function suggestNutrition(name, portion){
+async function parseMealText(text){
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),200000);
+  const tid=setTimeout(()=>ctrl.abort(),45000);
   try{
-    const resp=await fetch('/api/suggest', {
+    const resp=await fetch('/api/parse', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name, portion}),
+      body:JSON.stringify({text}),
       signal:ctrl.signal
     });
-    if(!resp.ok){
-      const err=await resp.json().catch(()=>({error:'Request failed'}));
-      throw new Error(err.error || ('HTTP '+resp.status));
-    }
-    return resp.json();
+    let payload=null;
+    try{ payload=await resp.json(); }catch(_){ payload=null; }
+    if(!resp.ok) throw new Error((payload&&payload.error)||('HTTP '+resp.status));
+    return payload;
   }finally{ clearTimeout(tid); }
 }
 
@@ -304,6 +340,8 @@ function recipePlate(index){
   addText(plate,'span','Plate study '+String(index+1).padStart(2,'0'),'plate__tag');
   return plate;
 }
+
+let recipeImageQueue=Promise.resolve();
 
 function renderRecipes(recipes){
   const results=document.getElementById('recipeResults');
@@ -359,9 +397,11 @@ function renderRecipes(recipes){
     }
 
     const detail=document.createElement('div'); detail.className='recipe-detail';
+    const instructions=document.createElement('div'); instructions.className='recipe-instructions';
+    const aside=document.createElement('div'); aside.className='recipe-aside';
     const list=document.createElement('ol'); list.className='recipe-steps';
     recipe.steps.forEach(step=>addText(list,'li',step));
-    detail.appendChild(list);
+    instructions.appendChild(list);
 
     const n=recipe.nutrition;
     const nutrition=document.createElement('div'); nutrition.className='recipe-nutrition';
@@ -378,36 +418,45 @@ function renderRecipes(recipes){
     fact(Math.round(n.carbs)+'g', 'carbs');
     fact(Math.round(n.fat)+'g', 'fat');
     nutrition.appendChild(facts);
-    detail.appendChild(nutrition);
-    body.appendChild(detail);
-
     const footer=document.createElement('div'); footer.className='recipe-footer';
     const btn=addText(footer,'button','Add to tracker →','recipe-add'); btn.type='button';
     btn.addEventListener('click',()=>{
-      setFields(recipe.title,n.calories,n.protein,n.carbs,n.fat);
-      document.getElementById('portion').value='1 serving';
       activateTab('add');
-      document.getElementById('name').focus();
-      toast('Recipe added to the entry form for review.','success');
+      renderParsed(
+        [{name:recipe.title,portion:'1 serving',calories:n.calories,protein:n.protein,carbs:n.carbs,fat:n.fat}],
+        `Seeded from “${recipe.title}” · 1 serving · review before saving`,
+        'From a recipe'
+      );
+      mealText.value=recipe.title;
+      updateMealCount();
+      toast('Recipe sent to Log a meal for review.','success');
     });
-    body.appendChild(footer);
+    aside.appendChild(nutrition);
+    aside.appendChild(footer);
+    detail.appendChild(instructions);
+    detail.appendChild(aside);
+    body.appendChild(detail);
     card.appendChild(body);
     results.appendChild(card);
   });
-  imageJobs.forEach(async ({recipe,frame,index})=>{
-    try{
-      const result=await conjureRecipeImage(recipe);
-      const image=document.createElement('img');
-      image.className='recipe-image'; image.src=result.image; image.alt='AI generated image of '+recipe.title;
-      image.loading='lazy';
-      frame.appendChild(image);
-      if(image.decode){ try{ await image.decode(); }catch(_){} }
-      frame.removeAttribute('role');
-      frame.removeAttribute('aria-label');
-      requestAnimationFrame(()=>requestAnimationFrame(()=>frame.classList.add('is-ready')));
-    }catch(_){
-      frame.replaceWith(recipePlate(index));
-    }
+  imageJobs.forEach(job=>{
+    recipeImageQueue=recipeImageQueue.then(async()=>{
+      const {recipe,frame,index}=job;
+      if(!frame.isConnected) return;
+      try{
+        const result=await conjureRecipeImage(recipe);
+        const image=document.createElement('img');
+        image.className='recipe-image'; image.src=result.image; image.alt='AI generated image of '+recipe.title;
+        image.loading='lazy';
+        frame.appendChild(image);
+        if(image.decode){ try{ await image.decode(); }catch(_){} }
+        frame.removeAttribute('role');
+        frame.removeAttribute('aria-label');
+        requestAnimationFrame(()=>requestAnimationFrame(()=>frame.classList.add('is-ready')));
+      }catch(_){
+        frame.replaceWith(recipePlate(index));
+      }
+    });
   });
 }
 
@@ -426,20 +475,23 @@ document.getElementById('conjureBtn').addEventListener('click',async()=>{
   const status=document.getElementById('alchemistStatus');
   const results=document.getElementById('recipeResults');
   if(!ingredients){ status.textContent='Add at least one ingredient to begin the experiment.'; document.getElementById('alchemistIngredients').focus(); return; }
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Mixing the cauldron...';
-  status.textContent='The Alchemist is consulting the leftovers...';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Inventing…';
+  status.textContent='Reading the fridge…';
   results.replaceChildren();
   try{
     const result=await conjureRecipes(ingredients,useSoon);
-    if(!Array.isArray(result.recipes)||result.recipes.length!==3) throw new Error('The Alchemist returned an incomplete set. Please try again.');
+    if(!Array.isArray(result.recipes)||result.recipes.length===0) throw new Error('No recipe ideas came back. Please try again.');
     renderRecipes(result.recipes);
+    results.removeAttribute('aria-busy');
     glideTo(results);
     status.textContent=result.recipes.some(recipe=>recipe.image_pending)
-      ? 'Three ideas, freshly conjured. Images are painting in the background; nutrition is an estimate.'
-      : 'Three ideas, freshly conjured. Nutrition is an estimate.';
+      ? 'Three ideas, freshly invented. Images are painting in the background; nutrition is an estimate.'
+      : 'Three ideas, freshly invented. Nutrition is an estimate.';
   }catch(e){
-    status.textContent=e.name==='AbortError'?'The cauldron timed out. Try again in a moment.':'The conjuring failed: '+e.message;
-  }finally{ btn.disabled=false; btn.textContent='Conjure recipes'; }
+    results.replaceChildren();
+    results.removeAttribute('aria-busy');
+    status.textContent=e.name==='AbortError'?'The ideas timed out. Try again in a moment.':'That did not work: '+e.message;
+  }finally{ btn.disabled=false; btn.textContent='Create a meal'; }
 });
 
 function toast(msg,kind='success'){
@@ -451,54 +503,314 @@ function toast(msg,kind='success'){
   window.__toastTid=setTimeout(()=>{ t.classList.remove('show'); }, 2500);
 }
 
-document.getElementById('suggestBtn').addEventListener('click', async ()=>{
-  const name=document.getElementById('name').value.trim();
-  const portion=document.getElementById('portion').value.trim();
-  const btn=document.getElementById('suggestBtn');
-  if(!name){ toast('Enter a food name first.', 'error'); return; }
-  btn.classList.add('loading'); btn.innerHTML='<span class="spinner"></span>Suggesting...';
-  try{
-    const r=await suggestNutrition(name, portion);
-    setFields(r.name, r.calories, r.protein, r.carbs, r.fat);
-    toast(`Suggested: ${r.name} — ${Math.round(r.calories)} cal`, 'success');
-  }catch(e){
-    if(e.name==='AbortError'){ toast('Suggestion timed out', 'error'); }
-    else { toast('Suggestion failed: '+e.message, 'error'); }
-  }finally{
-    btn.classList.remove('loading'); btn.textContent='✨ Suggest with AI';
-  }
-});
+/* ---------- compose: describe a meal, review the items, save ---------- */
 
-document.getElementById('entryForm').addEventListener('submit',event=>{
-  event.preventDefault();
-  document.getElementById('addBtn').click();
-});
+const parsedState={items:[], busy:false};
 
-document.getElementById('addBtn').addEventListener('click', async ()=>{
-  const nameInput=document.getElementById('name');
-  const caloriesInput=document.getElementById('calories');
-  const name=nameInput.value.trim();
-  const calories=parseFloat(caloriesInput.value);
+function num(n){ return Math.max(0, Number(n)||0); }
+
+function setParseBusy(busy){
+  parsedState.busy=busy;
+  const parseBtn=document.getElementById('parseBtn');
+  parseBtn.disabled=busy;
+  parseBtn.setAttribute('aria-busy', busy?'true':'false');
+  parseBtn.innerHTML=busy?'<span class="spinner"></span>Estimating…':'Estimate nutrition';
+  const manualBtn=document.getElementById('manualRowBtn');
+  if(manualBtn) manualBtn.disabled=busy;
+  const saveBtn=document.getElementById('saveParsedBtn');
+  if(saveBtn) saveBtn.disabled=busy||parsedState.items.length===0;
+}
+
+function updateMealCount(){
+  const text=document.getElementById('mealText');
+  document.getElementById('mealCount').textContent=String(text.value.length);
+}
+
+function showParseError(message){
+  const node=document.getElementById('parseError');
+  node.textContent=message;
+  node.hidden=false;
+}
+function hideParseError(){ document.getElementById('parseError').hidden=true; }
+
+function resetParsedTotals(){
+  ['totalCalories','totalProtein','totalCarbs','totalFat'].forEach(id=>{
+    document.getElementById(id).textContent='—';
+  });
+  document.getElementById('totalsNote').textContent='';
+  document.querySelectorAll('#parsedMacrobar [data-macro]').forEach(seg=>{ seg.style.width='0%'; });
+  document.getElementById('macroLegend').textContent='';
+}
+
+function revealResult(sub, kicker='The plate'){
+  document.getElementById('resultKicker').textContent=kicker;
+  document.getElementById('resultSub').textContent=sub;
+  document.getElementById('parseResult').hidden=false;
+}
+
+function buildParsedRow(item, index){
+  const row=document.createElement('div');
+  row.className='a-grid a-item';
+  row.setAttribute('role','row');
+
+  const itemLabel=item.name||('item '+(index+1));
+  const cell=(label,className,input)=>{
+    const wrap=document.createElement('label');
+    wrap.className='a-cell'+(className?' '+className:'');
+    const caption=document.createElement('span');
+    caption.className='a-cell__label';
+    caption.textContent=label;
+    wrap.append(caption,input);
+    return wrap;
+  };
+  const textInput=(field,label)=>{
+    const input=document.createElement('input');
+    input.type='text';
+    input.value=item[field]||'';
+    input.maxLength=120;
+    input.setAttribute('aria-label',label);
+    input.addEventListener('input',()=>{ item[field]=input.value; });
+    return input;
+  };
+  const numberInput=(field,label)=>{
+    const input=document.createElement('input');
+    input.type='number';
+    input.min='0';
+    input.step='0.1';
+    input.value=String(num(item[field]));
+    input.setAttribute('aria-label',label);
+    input.addEventListener('input',()=>{ item[field]=num(input.value); recomputeParsed(); });
+    return input;
+  };
+
+  row.appendChild(cell('Item','a-cell--name',textInput('name','Item name '+(index+1))));
+  row.appendChild(cell('Portion','',textInput('portion','Portion for '+itemLabel)));
+  row.appendChild(cell('kcal','a-cell--num',numberInput('calories','Calories for '+itemLabel)));
+  row.appendChild(cell('P','a-cell--num',numberInput('protein','Protein grams for '+itemLabel)));
+  row.appendChild(cell('C','a-cell--num',numberInput('carbs','Carbs grams for '+itemLabel)));
+  row.appendChild(cell('F','a-cell--num',numberInput('fat','Fat grams for '+itemLabel)));
+
+  const remove=document.createElement('button');
+  remove.type='button';
+  remove.className='a-item__remove';
+  remove.innerHTML='&times;';
+  remove.setAttribute('aria-label','Remove '+itemLabel);
+  remove.addEventListener('click',()=>{
+    parsedState.items.splice(index,1);
+    if(parsedState.items.length===0){
+      document.getElementById('parsedRows').replaceChildren();
+      document.getElementById('parseResult').hidden=true;
+      resetParsedTotals();
+      return;
+    }
+    paintParsedRows();
+  });
+  row.appendChild(remove);
+
+  return row;
+}
+
+function paintParsedRows(){
+  const host=document.getElementById('parsedRows');
+  host.replaceChildren();
+  parsedState.items.forEach((item,index)=>host.appendChild(buildParsedRow(item,index)));
+  const save=document.getElementById('saveParsedBtn');
+  if(save) save.disabled=parsedState.busy||parsedState.items.length===0;
+  recomputeParsed();
+}
+
+function recomputeParsed(){
+  const totals=parsedState.items.reduce((acc,item)=>{
+    acc.calories+=num(item.calories);
+    acc.protein+=num(item.protein);
+    acc.carbs+=num(item.carbs);
+    acc.fat+=num(item.fat);
+    return acc;
+  },{calories:0,protein:0,carbs:0,fat:0});
+
+  document.getElementById('totalCalories').textContent=fmt(totals.calories);
+  document.getElementById('totalProtein').textContent=fmt1(totals.protein);
+  document.getElementById('totalCarbs').textContent=fmt1(totals.carbs);
+  document.getElementById('totalFat').textContent=fmt1(totals.fat);
+
+  const count=parsedState.items.length;
+  document.getElementById('totalsNote').textContent=count
+    ? `${count} ${count===1?'item':'items'}`
+    : '';
+
+  const energy=totals.protein*4+totals.carbs*4+totals.fat*9;
+  const share=(grams,perGram)=>energy>0?(grams*perGram)/energy:0;
+  const p=share(totals.protein,4), c=share(totals.carbs,4), f=share(totals.fat,9);
+  const bar=document.getElementById('parsedMacrobar');
+  bar.querySelector('[data-macro="p"]').style.width=`${(p*100).toFixed(1)}%`;
+  bar.querySelector('[data-macro="c"]').style.width=`${(c*100).toFixed(1)}%`;
+  bar.querySelector('[data-macro="f"]').style.width=`${(f*100).toFixed(1)}%`;
+  document.getElementById('macroLegend').textContent=energy>0
+    ? `Protein ${Math.round(p*100)}% · Carbs ${Math.round(c*100)}% · Fat ${Math.round(f*100)}% of energy`
+    : 'The macro split appears once there are numbers to divide.';
+}
+
+function renderParsed(items, sub, kicker='The plate', focus=false){
+  parsedState.items=items.map(item=>({
+    name:String(item.name||''),
+    portion:String(item.portion||''),
+    calories:num(item.calories),
+    protein:num(item.protein),
+    carbs:num(item.carbs),
+    fat:num(item.fat),
+  }));
+  revealResult(sub,kicker);
+  paintParsedRows();
+  if(focus) document.getElementById('resultTitle').focus({preventScroll:true});
+  glideTo(document.getElementById('parseResult'));
+}
+
+function clearParsed(){
+  parsedState.items=[];
+  document.getElementById('parsedRows').replaceChildren();
+  document.getElementById('parseResult').hidden=true;
+  document.getElementById('mealText').value='';
+  document.getElementById('date').value=today();
+  updateMealCount();
+  hideParseError();
   clearInlineErrors();
-  if(!name){ showInlineError(nameInput,'Name is required.'); nameInput.focus(); return; }
-  if(isNaN(calories)){ showInlineError(caloriesInput,'Please enter a valid number for calories.'); caloriesInput.focus(); return; }
-  const protein=parseFloat(document.getElementById('protein').value)||0;
-  const carbs=parseFloat(document.getElementById('carbs').value)||0;
-  const fat=parseFloat(document.getElementById('fat').value)||0;
+  resetParsedTotals();
+  const save=document.getElementById('saveParsedBtn');
+  if(save){ save.textContent='Save to the record'; save.disabled=true; }
+  setParseBusy(false);
+}
+
+async function parseMeal(){
+  if(parsedState.busy) return;
+  const textInput=document.getElementById('mealText');
+  const text=textInput.value.trim();
+  clearInlineErrors();
+  hideParseError();
+  if(!text){
+    showInlineError(textInput,'Describe at least one food first.');
+    showParseError('Describe at least one food first.');
+    textInput.focus();
+    return;
+  }
+
+  parsedState.items=[];
+  document.getElementById('parsedRows').replaceChildren();
+  document.getElementById('parseResult').hidden=true;
+  setParseBusy(true);
+  resetParsedTotals();
+  const save=document.getElementById('saveParsedBtn');
+  if(save) save.disabled=true;
+
+  try{
+    const payload=await parseMealText(text);
+    if(!payload||!Array.isArray(payload.items)||payload.items.length===0){
+      throw new Error('The model found no food in that description. Try naming the foods and portions.');
+    }
+    const count=payload.items.length;
+    renderParsed(payload.items,`${count} ${count===1?'item':'items'} · edit any number before saving`,'The plate',true);
+    hideParseError();
+  }catch(error){
+    parsedState.items=[];
+    resetParsedTotals();
+    const message=error.name==='AbortError'
+      ? 'No response after 45 seconds. The model may be slow or unreachable.'
+      : error.message;
+    showParseError('Couldn’t itemise that: '+message);
+    revealResult('Estimate unavailable · add a row by hand to continue.','Manual entry');
+  }finally{
+    setParseBusy(false);
+    if(parsedState.items.length) recomputeParsed();
+  }
+}
+
+function manualRow(){
+  if(parsedState.busy) return;
+  hideParseError();
+  clearInlineErrors();
+  renderParsed(
+    [{name:'',portion:'',calories:0,protein:0,carbs:0,fat:0}],
+    'Manual entry · nothing sent to the model · review before saving',
+    'Manual entry'
+  );
+  const first=document.querySelector('#parsedRows .a-cell--name input');
+  if(first) first.focus({preventScroll:true});
+}
+
+async function saveParsed(){
+  if(parsedState.busy) return;
+  if(parsedState.items.length===0){
+    showParseError('Add at least one item first.');
+    return;
+  }
+  const blank=parsedState.items.findIndex(item=>!String(item.name||'').trim());
+  if(blank!==-1){
+    toast(`Item ${blank+1} needs a name before it can be saved.`,'error');
+    const inputs=document.querySelectorAll('#parsedRows .a-cell--name input');
+    if(inputs[blank]) inputs[blank].focus();
+    return;
+  }
+
   const activeMeal=document.querySelector('.meal-chip.active');
   const meal=activeMeal?activeMeal.dataset.meal:'breakfast';
   let dateStr=document.getElementById('date').value;
   if(!dateStr) dateStr=today();
+
+  const entries=parsedState.items.map(item=>({
+    name:String(item.name).trim(),
+    calories:num(item.calories),
+    protein:num(item.protein),
+    carbs:num(item.carbs),
+    fat:num(item.fat),
+    meal,
+    date:dateStr,
+  }));
+
+  const saveBtn=document.getElementById('saveParsedBtn');
+  saveBtn.disabled=true;
+  saveBtn.innerHTML='<span class="spinner"></span>Saving…';
   try{
-    applyData(await JournalStore.addEntries([{name, calories, protein, carbs, fat, meal, date:dateStr}]));
+    applyData(await JournalStore.addEntries(entries));
   }catch(error){
+    saveBtn.disabled=false;
+    saveBtn.textContent='Save to the record';
     toast('Could not save: '+error.message,'error');
     return;
   }
-  ['name','calories','protein','carbs','fat','portion'].forEach(id=>document.getElementById(id).value='');
-  toast(`Added '${name}' (${Math.round(calories)} cal) to ${meal} on ${dateStr}.`, 'success');
+  toast(`Saved ${entries.length} ${entries.length===1?'item':'items'} to ${meal} on ${dateStr}.`,'success');
+  clearParsed();
   render();
+}
+
+const mealText=document.getElementById('mealText');
+mealText.addEventListener('input',()=>{
+  updateMealCount();
+  if(!document.getElementById('parseError').hidden) hideParseError();
 });
+document.querySelectorAll('[data-example]').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    mealText.value=chip.dataset.example||chip.textContent.trim();
+    updateMealCount();
+    mealText.focus();
+  });
+});
+document.querySelectorAll('[data-ingredients]').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    const ingredients=document.getElementById('alchemistIngredients');
+    ingredients.value=chip.dataset.ingredients||'';
+    updateCharacterCount(ingredients,'alchemistIngredientsCount');
+    ingredients.focus();
+  });
+});
+function updateCharacterCount(input,countId){
+  document.getElementById(countId).textContent=String(input.value.length);
+}
+const alchemistIngredients=document.getElementById('alchemistIngredients');
+alchemistIngredients.addEventListener('input',()=>updateCharacterCount(alchemistIngredients,'alchemistIngredientsCount'));
+updateCharacterCount(alchemistIngredients,'alchemistIngredientsCount');
+document.getElementById('parseBtn').addEventListener('click',parseMeal);
+document.getElementById('manualRowBtn').addEventListener('click',manualRow);
+document.getElementById('clearParsedBtn').addEventListener('click',clearParsed);
+document.getElementById('saveParsedBtn').addEventListener('click',saveParsed);
 
 function clearInlineErrors(){
   document.querySelectorAll('.field-error').forEach(el=>el.remove());
@@ -561,20 +873,20 @@ function entryRow(e, withTools){
 function editEntry(id){
   const entry=data.entries.find(e=>e.id===id);
   if(!entry) return;
-  document.getElementById('name').value=entry.name;
-  document.getElementById('portion').value='';
-  document.getElementById('calories').value=entry.calories;
-  document.getElementById('protein').value=entry.protein;
-  document.getElementById('carbs').value=entry.carbs;
-  document.getElementById('fat').value=entry.fat;
-  document.getElementById('date').value=entry.date;
+  activateTab('add');
   document.querySelectorAll('.meal-chip').forEach(c=>{
     const on=c.dataset.meal===entry.meal;
     c.classList.toggle('active',on);
     c.setAttribute('aria-pressed',on);
   });
-  clearInlineErrors();
-  activateTab('add');
+  document.getElementById('date').value=entry.date||today();
+  document.getElementById('mealText').value=entry.name;
+  updateMealCount();
+  renderParsed(
+    [{name:entry.name,portion:'',calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat}],
+    `Seeded from “${entry.name}” · edit, then save as a new entry`,
+    'From the archive'
+  );
 }
 
 async function deleteEntry(id){

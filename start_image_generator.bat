@@ -25,5 +25,5 @@ if not exist "%MODEL%" (
 )
 
 echo Starting SDXL-Turbo on http://127.0.0.1:7860 ...
-"%SD_SERVER%" -m "%MODEL%" --listen-ip 127.0.0.1 --listen-port 7860 --steps 6 --cfg-scale 1 --sampling-method euler_a --vae-tiling
+"%SD_SERVER%" -m "%MODEL%" --listen-ip 127.0.0.1 --listen-port 7860 --steps 6 --cfg-scale 1 --sampling-method euler_a --vae-tiling --offload-to-cpu
 pause

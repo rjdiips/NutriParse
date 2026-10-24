@@ -75,7 +75,7 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.headers["content-type"].startswith("text/html"))
 
-        script = self.client.get("/compose.js")
+        script = self.client.get("/nutriparse.js")
         self.assertEqual(script.status_code, 200)
         self.assertTrue(script.headers["content-type"].startswith("text/javascript"))
 
