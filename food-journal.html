@@ -285,7 +285,8 @@ document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',
 
 async function parseMealText(text){
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),45000);
+  /* The server gives a local model 180 s (LLM_TIMEOUT); stop just after it. */
+  const tid=setTimeout(()=>ctrl.abort(),185000);
   try{
     const resp=await fetch('/api/parse', {
       method:'POST',
@@ -715,7 +716,7 @@ async function parseMeal(){
     parsedState.items=[];
     resetParsedTotals();
     const message=error.name==='AbortError'
-      ? 'No response after 45 seconds. The model may be slow or unreachable.'
+      ? 'No response after 185 seconds. The model may be slow or unreachable.'
       : error.message;
     showParseError('Couldn’t itemise that: '+message);
     revealResult('Estimate unavailable · add a row by hand to continue.','Manual entry');
@@ -993,7 +994,7 @@ function renderSummary(){
   document.getElementById('todayGoal').textContent=fmt(goal);
   document.getElementById('todayDeck').textContent=tt.count===0
     ? 'Nothing logged yet. The page is open — add the first thing you actually ate.'
-    : `${tt.count} ${tt.count===1?'meal':'meals'} logged, ${fmt(tt.calories)} calories. ` +
+    : `${tt.count} ${tt.count===1?'item':'items'} logged, ${fmt(tt.calories)} calories. ` +
       (remaining>0
         ? `There is room left for something good — ${fmt(remaining)} calories of it.`
         : `You are ${fmt(Math.abs(remaining))} over today’s target. Tomorrow is a fresh page.`);
@@ -1012,7 +1013,8 @@ function renderSummary(){
 }
 
 function renderGoal(){
-  document.getElementById('goalInput').value=data.calorie_goal;
+  const input=document.getElementById('goalInput');
+  if(document.activeElement!==input) input.value=data.calorie_goal;
   document.getElementById('goalStatus').textContent='Current daily calorie goal: '+fmt(data.calorie_goal)+'.';
   const goal=data.calorie_goal;
   const tt=totalsForDate(data.entries,today());
@@ -1037,8 +1039,9 @@ document.getElementById('saveGoal').addEventListener('click', async ()=>{
     toast('Could not save the goal: '+error.message,'error');
     return;
   }
-  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+fmt(data.calorie_goal)+'.';
+  /* render() repaints the status line, so set the confirmation after it. */
   render();
+  document.getElementById('goalStatus').textContent='Daily calorie goal set to '+fmt(data.calorie_goal)+'.';
   toast('Daily goal updated to '+fmt(data.calorie_goal)+' calories.','success');
 });
 
