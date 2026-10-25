@@ -1,5 +1,5 @@
 /* ============================================================
-   NutriParse ? The Food Journal
+   NutriParse — The Food Journal
    Editorial system borrowed from the Invent a meal card.
    ============================================================ */
 
@@ -185,7 +185,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .toast.show { opacity: 1; transform: none; }
 .toast.error { background: var(--wine); }
 
-/* Plate studies ? CSS-only food imagery */
+/* Plate studies — CSS-only food imagery */
 .plate {
   --rim: #333a2b;
   --bowl: #5e6b4c;
@@ -260,7 +260,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
   backdrop-filter: blur(6px);
 }
 
-/* Macro plate ? the day's macro split as a plate study */
+/* Macro plate — the day's macro split as a plate study */
 .macro-plate {
   position: relative;
   display: grid;
@@ -353,7 +353,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
   backdrop-filter: blur(6px);
 }
 
-/* Recipe card ? the source design */
+/* Recipe card — the source design */
 .recipe-card {
   display: grid;
   grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
@@ -800,7 +800,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 }
 .suggest-info-wrap:hover .suggest-help, .suggest-info-wrap:focus-within .suggest-help { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
 
-/* Compose ? describe a meal, review the items, then save */
+/* Compose — describe a meal, review the items, then save */
 .sr-only {
   position: absolute;
   width: 1px;

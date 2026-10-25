@@ -8,9 +8,9 @@ Turn free text about food into structured, validated nutrition data. A prompt-fi
   <img src="screenshots/compose-estimate.png" alt="NutriParse Compose view: the meal '2 rotis, dal, and a glass of lassi' parsed into three editable rows — Roti, Dal and Lassi — with calories, protein, carbs and fat, totalling 470 kcal">
 </p>
 
-<p align="center"><sub><b>Compose ? Estimate.</b> One line in, one editable row per food out, totals recomputed from the rows you can see.</sub></p>
+<p align="center"><sub><b>Compose → Estimate.</b> One line in, one editable row per food out, totals recomputed from the rows you can see.</sub></p>
 
-Jump to: [Features](#features) — [Tech stack](#tech-stack) — [Web interface](#web-interface) — [Local models](#local-models-no-cloud-calls) — [Tests](#tests) — [Model evaluation](#model-evaluation) — [File layout](#file-layout)
+Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
 
 ## Features
 
@@ -82,7 +82,7 @@ The app has two views, switched from the top bar.
   <img src="screenshots/cook-ideas.png" alt="NutriParse Cook view: the ingredients 'chai, chappati, dahi, ice-cream' turned into three recipe cards, each with a generated image, per-serving calories and macros, ingredient list and numbered steps">
 </p>
 
-<p align="center"><sub><b>Compose ? Cook.</b> The other intent on the same surface: three ideas with per-serving macros and steps, plus the same call detail.</sub></p>
+<p align="center"><sub><b>Compose → Cook.</b> The other intent on the same surface: three ideas with per-serving macros and steps, plus the same call detail.</sub></p>
 
 **Journal** is the read side of the same store: today's calories against your goal, protein/carbs/fat totals and entry count, an editable goal with presets, history grouped by day with per-day totals, a search box, and a per-entry delete.
 
@@ -112,7 +112,7 @@ The server owns `data.json`; the browser keeps no copy of its own. Saving in Com
 | Endpoint | Body | Returns |
 | --- | --- | --- |
 | `GET /api/journal` | — | the whole document |
-| `POST /api/journal/entries` | `{"entries": [ — ]}` | the document including the new rows, each with a server-assigned id |
+| `POST /api/journal/entries` | `{"entries": [ … ]}` | the document including the new rows, each with a server-assigned id |
 | `DELETE /api/journal/entries/<id>` | — | the document without that row |
 | `POST /api/journal/goal` | `{"calorie_goal": 2200}` | the document with the new goal |
 
@@ -124,7 +124,7 @@ Entries saved by an earlier version of the web app, in `localStorage` under `ct_
 
 ### Local recipe images (NVIDIA CUDA)
 
-Recipe images use an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` endpoint. On an NVIDIA GPU, run `setup_image_generator.bat` once. It downloads the stable-diffusion.cpp CUDA build (about 900 MB including the CUDA runtime) and Stability AI's SDXL-Turbo checkpoint (6.9 GB). Then launch `start_image_generator.bat` before using Cook mode. The service binds to `127.0.0.1:7860`, uses the GPU, and produces 512—512 images in 6 steps, typically in a few seconds each on an 8 GB laptop GPU. First startup loads the checkpoint and can take 20—40 seconds.
+Recipe images use an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` endpoint. On an NVIDIA GPU, run `setup_image_generator.bat` once. It downloads the stable-diffusion.cpp CUDA build (about 900 MB including the CUDA runtime) and Stability AI's SDXL-Turbo checkpoint (6.9 GB). Then launch `start_image_generator.bat` before using Cook mode. The service binds to `127.0.0.1:7860`, uses the GPU, and produces 512×512 images in 6 steps, typically in a few seconds each on an 8 GB laptop GPU. First startup loads the checkpoint and can take 20–40 seconds.
 
 Turbo checkpoints expect CFG 1 and few sampling steps; the start script passes both. It also enables `--offload-to-cpu` so model weights can move through system RAM instead of reserving nearly all GPU memory; this reduces peak VRAM use at the cost of some speed. Image size and steps are read from `.env` (`LOCAL_IMAGE_WIDTH`, `LOCAL_IMAGE_HEIGHT`, `LOCAL_IMAGE_STEPS`). If you replace SDXL-Turbo with a regular checkpoint such as SD 1.5, set `LOCAL_IMAGE_STEPS=20` in `.env` and adjust `--cfg-scale` in the start script. Binaries and model files live in `.image-tools/` and `models/`, both excluded by `.gitignore`.
 
@@ -168,7 +168,7 @@ irm https://llama.app/install.ps1 | iex
 
 Or download a Windows build from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases). On an NVIDIA GPU take `llama-<build>-bin-win-cuda-x64.zip` **and** the matching `cudart-<build>-bin-win-cuda-x64.zip`; on CPU-only machines take `llama-<build>-bin-win-cpu-x64.zip`. Extract so `llama-server.exe` lands at `.llm-tools\llama-server.exe` (or add it to `PATH`); `.llm-tools/` is gitignored. `start_llm.bat` uses the `llama` CLI when it is on `PATH` and falls back to `llama-server.exe`.
 
-**2. Fetch a GGUF model.** Any instruct model that follows the prompt and emits JSON works. A `Q4_K_M` quant is the usual starting point — roughly 5—6 GB for a 9B model, and small enough for an 8 GB laptop GPU. Put the file under `models\<model-name>\` (or a shared `D:\models\<model-name>\`); GGUF embeds the tokenizer and chat template, so the one file is all the app needs.
+**2. Fetch a GGUF model.** Any instruct model that follows the prompt and emits JSON works. A `Q4_K_M` quant is the usual starting point — roughly 5–6 GB for a 9B model, and small enough for an 8 GB laptop GPU. Put the file under `models\<model-name>\` (or a shared `D:\models\<model-name>\`); GGUF embeds the tokenizer and chat template, so the one file is all the app needs.
 
 ```powershell
 New-Item -ItemType Directory -Force models\qwen3.5-9b | Out-Null
@@ -176,7 +176,7 @@ curl.exe -L -o models\qwen3.5-9b\qwen3.5-9b-Q4_K_M.gguf `
   "https://huggingface.co/<org>/<repo>/resolve/main/<file>.gguf?download=true"
 ```
 
-Replace the `<—>` placeholders with the repository and filename you chose. `start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` to a full path to use a file somewhere else.
+Replace the `<…>` placeholders with the repository and filename you chose. `start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` to a full path to use a file somewhere else.
 
 **3. Start the server.** Run `.\start_llm.bat`, or the same command by hand:
 
@@ -232,7 +232,7 @@ Ollama serves the same OpenAI-compatible path on port 11434 and keeps the model 
 | llama.cpp | `http://localhost:8080/v1` |
 | vLLM | `http://localhost:8000/v1` |
 
-Load the model in the server, then set `LLM_BASE_URL`. Set `LLM_MODEL` to the ID the server reports at `/v1/models` when it routes by name (vLLM, LM Studio); with a single-model llama.cpp server the value is only a label. Hosted or self-hosted gateways work the same way — use their `https://—/v1` URL and `LLM_API_KEY` if they require one.
+Load the model in the server, then set `LLM_BASE_URL`. Set `LLM_MODEL` to the ID the server reports at `/v1/models` when it routes by name (vLLM, LM Studio); with a single-model llama.cpp server the value is only a label. Hosted or self-hosted gateways work the same way — use their `https://…/v1` URL and `LLM_API_KEY` if they require one.
 
 #### Tuning local inference
 
@@ -245,7 +245,7 @@ Load the model in the server, then set `LLM_BASE_URL`. Set `LLM_MODEL` to the ID
 | Parsing takes ~100 s and reports thousands of completion tokens | Thinking is still on. Restart the server with `--reasoning off`; the same meal then parses in ~7 s and ~200 tokens. |
 | HTTP 400 mentioning `response_format` | Set `LLM_JSON_MODE=false`; the prompt still asks for JSON and fenced output is stripped. |
 | HTTP 404 from the model call | `LLM_BASE_URL` is missing `/v1`. |
-| HTTP 502 —Could not reach Local model— | The server is not running, or the port in `.env` does not match the one the server bound. |
+| HTTP 502 — “Could not reach Local model” | The server is not running, or the port in `.env` does not match the one the server bound. |
 
 Local providers do not need an API key. `LLM_TIMEOUT` overrides the request timeout (defaults: 30 for nutrition and 45 for recipes on OpenRouter, 180 for local models — generous because a cold load can take a while). Recipe images are unaffected and still use the local image service. Because `evals/results.json` is a snapshot of one model on one date, re-run `python evals/run_parse_eval.py` after changing the model or quant.
 
@@ -290,7 +290,7 @@ python evals/run_parse_eval.py --check-fixtures   # offline: validate the cases 
 
 Thirteen cases, twelve with a calorie reference and one non-food refusal check. Each case carries per-item ranges and a `basis` naming the composition data behind them, and rows that a model splits are summed before comparison, so a correct split is not punished. The runner reports within-range rate, mean signed error (the bias), mean absolute error, item detection, refusals, latency and tokens, and writes `evals/results.md` plus the raw `evals/results.json`. See `evals/README.md` for the method and its limits.
 
-The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 2026): 10 of 12 scored meals landed inside their reference range, with a mean signed error of -4.4%. The aggregate hides the useful part, though. The errors are concentrated in energy-dense food — two slices of pepperoni pizza at 300 kcal against 450—700, two samosas and a chai at 240 against 310—530 — and a meal can total in range while an item inside it is wrong: "2 rotis, dal, and a lassi" lands at 470 kcal against 420—650, with the roti row at 140 kcal against 180—260. The same run also returned `one piece` for "two samosas", which is a portion bug rather than a calorie-estimate bug. Those per-item rows are the reason the harness exists.
+The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 2026): 10 of 12 scored meals landed inside their reference range, with a mean signed error of −4.4%. The aggregate hides the useful part, though. The errors are concentrated in energy-dense food — two slices of pepperoni pizza at 300 kcal against 450–700, two samosas and a chai at 240 against 310–530 — and a meal can total in range while an item inside it is wrong: "2 rotis, dal, and a lassi" lands at 470 kcal against 420–650, with the roti row at 140 kcal against 180–260. The same run also returned `one piece` for "two samosas", which is a portion bug rather than a calorie-estimate bug. Those per-item rows are the reason the harness exists.
 
 ## File layout
 
