@@ -273,5 +273,41 @@ class TestAiAndImages(ApiTestCase):
         self.assert_error(response, 503, "Local image generation is disabled")
 
 
+@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
+class TestRecipeRules(unittest.TestCase):
+    """The shape check that decides whether a recipe answer is usable."""
+
+    def recipe(self, steps=5):
+        return {"title": "Dal", "description": "A bowl", "steps": [f"Step {i}" for i in range(steps)]}
+
+    def test_a_complete_answer_has_no_shortcomings(self):
+        self.assertIsNone(server._recipe_shortcomings({"recipes": [self.recipe() for _ in range(3)]}))
+
+    def test_the_wrong_number_of_recipes_is_a_shortcoming(self):
+        for count in (0, 1, 2, 4):
+            with self.subTest(count=count):
+                problem = server._recipe_shortcomings(
+                    {"recipes": [self.recipe() for _ in range(count)]}
+                )
+                self.assertIn(f"{count} recipes", problem)
+
+    def test_collapsed_steps_are_a_shortcoming(self):
+        recipes = [self.recipe() for _ in range(2)] + [self.recipe(steps=2)]
+        self.assertIn("usable steps", server._recipe_shortcomings({"recipes": recipes}))
+
+    def test_missing_pieces_are_shortcomings(self):
+        self.assertIn("no recipe list", server._recipe_shortcomings({"recipes": "three"}))
+        self.assertIn("no recipe list", server._recipe_shortcomings(None))
+        self.assertIn("not an object", server._recipe_shortcomings({"recipes": ["Dal", "Rice", "Roti"]}))
+        no_steps = {"title": "Dal", "description": "A bowl"}
+        self.assertIn("no steps", server._recipe_shortcomings({"recipes": [no_steps, self.recipe(), self.recipe()]}))
+
+    def test_the_prompt_asks_for_three_sound_recipes(self):
+        prompt = server._recipe_prompt(["dal", "rice"], "spinach")
+        self.assertIn("exactly three", prompt)
+        self.assertIn("number of servings", prompt)
+        self.assertNotIn("instructions. servings", prompt)
+
+
 if __name__ == "__main__":
     unittest.main()
