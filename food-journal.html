@@ -505,7 +505,7 @@ function toast(msg,kind='success'){
 
 /* ---------- compose: describe a meal, review the items, save ---------- */
 
-const parsedState={items:[], busy:false};
+const parsedState={items:[], busy:false, editId:null};
 
 function num(n){ return Math.max(0, Number(n)||0); }
 
@@ -667,6 +667,7 @@ function renderParsed(items, sub, kicker='The plate', focus=false){
 
 function clearParsed(){
   parsedState.items=[];
+  parsedState.editId=null;
   document.getElementById('parsedRows').replaceChildren();
   document.getElementById('parseResult').hidden=true;
   document.getElementById('mealText').value='';
@@ -694,6 +695,7 @@ async function parseMeal(){
   }
 
   parsedState.items=[];
+  parsedState.editId=null;
   document.getElementById('parsedRows').replaceChildren();
   document.getElementById('parseResult').hidden=true;
   setParseBusy(true);
@@ -727,13 +729,15 @@ function manualRow(){
   if(parsedState.busy) return;
   hideParseError();
   clearInlineErrors();
-  renderParsed(
-    [{name:'',portion:'',calories:0,protein:0,carbs:0,fat:0}],
-    'Manual entry · nothing sent to the model · review before saving',
-    'Manual entry'
-  );
-  const first=document.querySelector('#parsedRows .a-cell--name input');
-  if(first) first.focus({preventScroll:true});
+  parsedState.items.push({name:'',portion:'',calories:0,protein:0,carbs:0,fat:0});
+  if(!parsedState.editId){
+    revealResult('Manual entry · nothing sent to the model · review before saving','Manual entry');
+  }
+  paintParsedRows();
+  glideTo(document.getElementById('parseResult'));
+  const inputs=document.querySelectorAll('#parsedRows .a-cell--name input');
+  const last=inputs[inputs.length-1];
+  if(last) last.focus({preventScroll:true});
 }
 
 async function saveParsed(){
@@ -757,6 +761,7 @@ async function saveParsed(){
 
   const entries=parsedState.items.map(item=>({
     name:String(item.name).trim(),
+    portion:String(item.portion||'').trim(),
     calories:num(item.calories),
     protein:num(item.protein),
     carbs:num(item.carbs),
@@ -765,18 +770,23 @@ async function saveParsed(){
     date:dateStr,
   }));
 
+  const editId=parsedState.editId;
   const saveBtn=document.getElementById('saveParsedBtn');
   saveBtn.disabled=true;
   saveBtn.innerHTML='<span class="spinner"></span>Saving…';
   try{
-    applyData(await JournalStore.addEntries(entries));
+    applyData(editId
+      ? await JournalStore.updateEntries(editId,entries)
+      : await JournalStore.addEntries(entries));
   }catch(error){
     saveBtn.disabled=false;
-    saveBtn.textContent='Save to the record';
+    saveBtn.textContent=editId?'Save changes':'Save to the record';
     toast('Could not save: '+error.message,'error');
     return;
   }
-  toast(`Saved ${entries.length} ${entries.length===1?'item':'items'} to ${meal} on ${dateStr}.`,'success');
+  toast(editId
+    ? `Updated ${entries.length} ${entries.length===1?'item':'items'} on ${dateStr}.`
+    : `Saved ${entries.length} ${entries.length===1?'item':'items'} to ${meal} on ${dateStr}.`,'success');
   clearParsed();
   render();
 }
@@ -853,6 +863,7 @@ function entryRow(e, withTools){
   addText(row,'span',cap(e.meal),'a-row__meal');
   const main=document.createElement('div'); main.className='a-row__main';
   addText(main,'span',e.name,'a-row__name');
+  if(e.portion) addText(main,'span',e.portion,'a-row__portion');
   addText(main,'span',`P ${fmt1(e.protein)} · C ${fmt1(e.carbs)} · F ${fmt1(e.fat)}`,'a-row__macros');
   row.appendChild(main);
   const cal=document.createElement('span'); cal.className='a-row__cal';
@@ -871,7 +882,7 @@ function entryRow(e, withTools){
 }
 
 function editEntry(id){
-  const entry=data.entries.find(e=>e.id===id);
+  const entry=data.entries.find(e=>String(e.id)===String(id));
   if(!entry) return;
   activateTab('add');
   document.querySelectorAll('.meal-chip').forEach(c=>{
@@ -882,15 +893,18 @@ function editEntry(id){
   document.getElementById('date').value=entry.date||today();
   document.getElementById('mealText').value=entry.name;
   updateMealCount();
+  parsedState.editId=entry.id;
   renderParsed(
-    [{name:entry.name,portion:'',calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat}],
-    `Seeded from “${entry.name}” · edit, then save as a new entry`,
+    [{name:entry.name,portion:entry.portion||'',calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat}],
+    `Editing “${entry.name}” · saving replaces this entry`,
     'From the archive'
   );
+  const save=document.getElementById('saveParsedBtn');
+  if(save) save.textContent='Save changes';
 }
 
 async function deleteEntry(id){
-  const entry=data.entries.find(e=>e.id===id);
+  const entry=data.entries.find(e=>String(e.id)===String(id));
   if(!entry) return;
   if(!confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
   try{

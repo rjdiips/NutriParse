@@ -48,6 +48,9 @@
   const addEntries = async (entries) =>
     normalize(await request('POST', `${ENDPOINT}/entries`, { entries }));
 
+  const updateEntries = async (id, entries) =>
+    normalize(await request('PUT', `${ENDPOINT}/entries/${encodeURIComponent(id)}`, { entries }));
+
   const removeEntry = async (id) =>
     normalize(await request('DELETE', `${ENDPOINT}/entries/${encodeURIComponent(id)}`));
 
@@ -84,6 +87,7 @@
 
   const asRow = (entry) => ({
     name: String(entry.name || '').trim() || 'Untitled',
+    portion: String(entry.portion || '').trim(),
     calories: value(entry.calories),
     protein: value(entry.protein),
     carbs: value(entry.carbs),
@@ -132,5 +136,5 @@
     return { moved: movable.length, skipped: left.length, document };
   }
 
-  global.JournalStore = { read, addEntries, removeEntry, setGoal, claimBrowserEntries };
+  global.JournalStore = { read, addEntries, updateEntries, removeEntry, setGoal, claimBrowserEntries };
 })(window);

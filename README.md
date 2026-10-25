@@ -113,6 +113,7 @@ The server owns `data.json`; the browser keeps no copy of its own. Saving in Com
 | --- | --- | --- |
 | `GET /api/journal` | — | the whole document |
 | `POST /api/journal/entries` | `{"entries": [ … ]}` | the document including the new rows, each with a server-assigned id |
+| `PUT /api/journal/entries/<id>` | `{"entries": [ … ]}` | the document with that row replaced; the first new row keeps the id |
 | `DELETE /api/journal/entries/<id>` | — | the document without that row |
 | `POST /api/journal/goal` | `{"calorie_goal": 2200}` | the document with the new goal |
 

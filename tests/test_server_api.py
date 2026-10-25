@@ -79,6 +79,19 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertEqual(script.status_code, 200)
         self.assertTrue(script.headers["content-type"].startswith("text/javascript"))
 
+    def test_journal_surface_is_served(self):
+        page = self.client.get("/food-journal.html")
+        self.assertEqual(page.status_code, 200)
+        self.assertTrue(page.headers["content-type"].startswith("text/html"))
+
+        style = self.client.get("/food-journal.css")
+        self.assertEqual(style.status_code, 200)
+        self.assertTrue(style.headers["content-type"].startswith("text/css"))
+
+        client = self.client.get("/journal-client.js")
+        self.assertEqual(client.status_code, 200)
+        self.assertTrue(client.headers["content-type"].startswith("text/javascript"))
+
     def test_private_files_are_not_reachable(self):
         for path in ("/server.py", "/.env", "/store.py", "/data.json"):
             with self.subTest(path=path):
@@ -112,6 +125,73 @@ class TestJournal(ApiTestCase):
         deleted = self.client.delete(f"/api/journal/entries/{entry_id}")
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(deleted.json()["entries"], [])
+
+    def test_portion_survives_the_round_trip(self):
+        created = self.client.post(
+            "/api/journal/entries",
+            json={"entries": [self.entry(portion="2 rotis")]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.json()["entries"][0]["portion"], "2 rotis")
+
+        read = self.client.get("/api/journal")
+        self.assertEqual(read.json()["entries"][0]["portion"], "2 rotis")
+
+    def test_update_replaces_an_entry(self):
+        created = self.client.post(
+            "/api/journal/entries",
+            json={"entries": [self.entry()]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        entry_id = created.json()["entries"][0]["id"]
+
+        updated = self.client.put(
+            f"/api/journal/entries/{entry_id}",
+            json={"entries": [self.entry(name="Dal", calories=150, portion="1 bowl")]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        self.assertEqual(updated.status_code, 200)
+        rows = updated.json()["entries"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], entry_id)
+        self.assertEqual((rows[0]["name"], rows[0]["portion"]), ("Dal", "1 bowl"))
+
+    def test_update_of_unknown_entry_is_404(self):
+        response = self.client.put(
+            "/api/journal/entries/not-there",
+            json={"entries": [self.entry()]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        self.assert_error(response, 404, "That entry is no longer in the journal.")
+
+    def test_update_needs_entries(self):
+        created = self.client.post(
+            "/api/journal/entries",
+            json={"entries": [self.entry()]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        entry_id = created.json()["entries"][0]["id"]
+        response = self.client.put(
+            f"/api/journal/entries/{entry_id}",
+            json={"entries": []},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        self.assert_error(response, 400, "Send at least one entry.")
+
+    def test_cross_origin_updates_are_refused(self):
+        created = self.client.post(
+            "/api/journal/entries",
+            json={"entries": [self.entry()]},
+            headers={"Origin": "http://localhost:8100"},
+        )
+        entry_id = created.json()["entries"][0]["id"]
+        response = self.client.put(
+            f"/api/journal/entries/{entry_id}",
+            json={"entries": [self.entry()]},
+            headers={"Origin": "https://evil.example"},
+        )
+        self.assert_error(response, 403, "Journal writes must come from the NutriParse app")
 
     def test_cross_origin_writes_are_refused(self):
         response = self.client.post(

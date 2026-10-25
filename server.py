@@ -729,6 +729,15 @@ def set_journal_goal(request: Request, payload: JSONBody):
     )
 
 
+@app.put("/api/journal/entries/{entry_id}")
+def update_journal_entry(entry_id: str, request: Request, payload: JSONBody):
+    require_same_origin(request)
+    return write_journal(
+        lambda: store.update_entry(app.state.store_path, entry_id, payload.get("entries")),
+        missing_is_404=True,
+    )
+
+
 @app.delete("/api/journal/entries/{entry_id}")
 def delete_journal_entry(entry_id: str, request: Request):
     require_same_origin(request)

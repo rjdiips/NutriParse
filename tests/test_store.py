@@ -117,6 +117,18 @@ class TestAddEntries(StoreTestCase):
         row = document["entries"][0]
         self.assertEqual((row["protein"], row["carbs"], row["fat"]), (0.0, 0.0, 0.0))
 
+    def test_portion_is_stored(self):
+        document = store.add_entries(self.path, [self.entry(portion="2 rotis")])
+        self.assertEqual(document["entries"][0]["portion"], "2 rotis")
+
+    def test_portion_is_optional(self):
+        document = store.add_entries(self.path, [self.entry()])
+        self.assertEqual(document["entries"][0]["portion"], "")
+
+    def test_portion_is_trimmed(self):
+        document = store.add_entries(self.path, [self.entry(portion="  1 cup  ")])
+        self.assertEqual(document["entries"][0]["portion"], "1 cup")
+
     def test_macros_are_rounded(self):
         document = store.add_entries(self.path, [self.entry(protein=3.14159)])
         self.assertEqual(document["entries"][0]["protein"], 3.1)
@@ -154,6 +166,10 @@ class TestValidation(StoreTestCase):
         self.assert_rejected(self.entry(calories="lots"), "must be a number")
         self.assert_rejected(self.entry(calories=True), "must be a number")
         self.assert_rejected("Roti", "must be an object")
+
+    def test_portion_rules(self):
+        self.assert_rejected(self.entry(portion="x" * 121), "120 characters")
+        self.assert_rejected(self.entry(portion=2), "Portion must be text")
 
     def test_nan_is_rejected(self):
         with self.assertRaises(store.StoreError):
@@ -208,6 +224,58 @@ class TestDelete(StoreTestCase):
         store.add_entries(self.path, [self.entry()])
         with self.assertRaises(store.EntryNotFound):
             store.delete_entry(self.path, "not-a-real-id")
+
+
+class TestUpdate(StoreTestCase):
+    def test_update_changes_fields_and_keeps_the_id(self):
+        document = store.add_entries(self.path, [self.entry()])
+        target = document["entries"][0]["id"]
+        updated = store.update_entry(self.path, target, [
+            self.entry(name="Dal", calories=150, portion="1 bowl"),
+        ])
+        self.assertEqual(len(updated["entries"]), 1)
+        row = updated["entries"][0]
+        self.assertEqual(row["id"], target)
+        self.assertEqual((row["name"], row["calories"], row["portion"]),
+                         ("Dal", 150.0, "1 bowl"))
+
+    def test_update_can_turn_one_row_into_several(self):
+        document = store.add_entries(self.path, [
+            self.entry(name="Roti"), self.entry(name="Dal"),
+        ])
+        target = document["entries"][0]["id"]
+        updated = store.update_entry(self.path, target, [
+            self.entry(name="Roti"), self.entry(name="Ghee"),
+        ])
+        self.assertEqual([row["name"] for row in updated["entries"]],
+                         ["Roti", "Ghee", "Dal"])
+        self.assertEqual(updated["entries"][0]["id"], target)
+        self.assertEqual(len({row["id"] for row in updated["entries"]}), 3)
+
+    def test_update_of_a_missing_entry_is_an_error(self):
+        store.add_entries(self.path, [self.entry()])
+        with self.assertRaises(store.EntryNotFound):
+            store.update_entry(self.path, "not-a-real-id", [self.entry()])
+
+    def test_update_rejects_an_empty_list(self):
+        document = store.add_entries(self.path, [self.entry()])
+        target = document["entries"][0]["id"]
+        with self.assertRaises(store.StoreError):
+            store.update_entry(self.path, target, [])
+
+    def test_update_validates_before_writing(self):
+        document = store.add_entries(self.path, [self.entry()])
+        target = document["entries"][0]["id"]
+        before = self.path.read_text(encoding="utf-8")
+        with self.assertRaises(store.StoreError):
+            store.update_entry(self.path, target, [self.entry(meal="brunch")])
+        self.assertEqual(self.path.read_text(encoding="utf-8"), before)
+
+    def test_update_does_not_duplicate_the_row(self):
+        document = store.add_entries(self.path, [self.entry()])
+        target = document["entries"][0]["id"]
+        store.update_entry(self.path, target, [self.entry(name="Dal")])
+        self.assertEqual(len(store.load(self.path)["entries"]), 1)
 
 
 class TestConcurrentWrites(StoreTestCase):

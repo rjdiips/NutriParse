@@ -707,6 +707,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .a-row__main { min-width: 0; }
 .a-row__meal { color: var(--muted); font-family: var(--sans); font-size: 8.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .a-row__name { display: block; color: var(--ink); font-family: var(--serif); font-size: 20px; letter-spacing: -.02em; line-height: 1.2; }
+.a-row__portion { display: block; margin-top: 2px; color: var(--text); font-family: var(--serif); font-size: 14px; font-style: italic; }
 .a-row__macros { display: block; margin-top: 3px; color: var(--muted); font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: .05em; }
 .a-row__cal { color: var(--ink); font-family: var(--serif); font-size: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .a-row__cal small { margin-left: 4px; color: var(--muted); font-family: var(--sans); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }

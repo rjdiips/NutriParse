@@ -25,6 +25,7 @@ DEFAULT_GOAL = 2000
 MAX_GOAL = 20000
 MAX_ENTRIES_PER_WRITE = 50
 MAX_NAME_LENGTH = 120
+MAX_PORTION_LENGTH = 120
 MEALS = ("breakfast", "lunch", "dinner", "snack")
 
 # One process can serve several requests at once, so read-modify-write cycles
@@ -78,6 +79,13 @@ def normalize_entry(raw):
     if len(name) > MAX_NAME_LENGTH:
         raise StoreError(f"Food names must be {MAX_NAME_LENGTH} characters or fewer.")
 
+    portion = raw.get("portion", "")
+    if not isinstance(portion, str):
+        raise StoreError("Portion must be text.")
+    portion = portion.strip()
+    if len(portion) > MAX_PORTION_LENGTH:
+        raise StoreError(f"Portions must be {MAX_PORTION_LENGTH} characters or fewer.")
+
     meal = raw.get("meal", "snack")
     if meal not in MEALS:
         raise StoreError(f"Meal must be one of: {', '.join(MEALS)}.")
@@ -93,6 +101,7 @@ def normalize_entry(raw):
     return {
         "id": uuid.uuid4().hex[:12],
         "name": name,
+        "portion": portion,
         "calories": _clean_number(raw.get("calories"), "Calories"),
         "protein": _clean_number(raw.get("protein", 0), "Protein"),
         "carbs": _clean_number(raw.get("carbs", 0), "Carbs"),
@@ -158,16 +167,44 @@ def _write(path, document):
     return payload
 
 
-def add_entries(path, entries):
-    """Append validated entries and return the whole updated document."""
+def _validated_batch(entries):
+    """Validate a caller's rows before anything touches the file."""
     if not isinstance(entries, list) or not entries:
         raise StoreError("Send at least one entry.")
     if len(entries) > MAX_ENTRIES_PER_WRITE:
-        raise StoreError(f"At most {MAX_ENTRIES_PER_WRITE} entries can be added at once.")
-    validated = [normalize_entry(entry) for entry in entries]
+        raise StoreError(f"At most {MAX_ENTRIES_PER_WRITE} entries can be written at once.")
+    return [normalize_entry(entry) for entry in entries]
+
+
+def add_entries(path, entries):
+    """Append validated entries and return the whole updated document."""
+    validated = _validated_batch(entries)
     with _LOCK:
         document = load(path)
         document["entries"] = document["entries"] + validated
+        return _write(path, document)
+
+
+def update_entry(path, entry_id, entries):
+    """Replace one entry with the given rows and return the whole document.
+
+    The first new row keeps the original id, so a caller can treat this as an
+    edit even when the user added or merged rows while editing.
+    """
+    validated = _validated_batch(entries)
+    wanted = str(entry_id)
+    with _LOCK:
+        document = load(path)
+        index = next(
+            (i for i, entry in enumerate(document["entries"]) if str(entry.get("id")) == wanted),
+            None,
+        )
+        if index is None:
+            raise EntryNotFound("That entry is no longer in the journal.")
+        existing_id = document["entries"][index].get("id")
+        if existing_id is not None:
+            validated[0]["id"] = existing_id
+        document["entries"][index:index + 1] = validated
         return _write(path, document)
 
 
