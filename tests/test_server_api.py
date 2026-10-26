@@ -309,5 +309,39 @@ class TestRecipeRules(unittest.TestCase):
         self.assertNotIn("instructions. servings", prompt)
 
 
+@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
+class TestMealItemRules(unittest.TestCase):
+    """Model output is trimmed to what the store will accept."""
+
+    def test_long_names_and_portions_are_cut_to_store_limits(self):
+        items = server._meal_items_from({"items": [{
+            "name": "n" * 300,
+            "portion": "p" * 300,
+            "calories": 100, "protein": 1, "carbs": 2, "fat": 3,
+        }]})
+        self.assertEqual(len(items[0]["name"]), server.store.MAX_NAME_LENGTH)
+        self.assertEqual(len(items[0]["portion"]), server.store.MAX_PORTION_LENGTH)
+        # What the parser emits must pass the store's own validation.
+        server.store.normalize_entry({**items[0], "meal": "lunch", "date": "2026-10-26"})
+
+    def test_a_missing_portion_is_empty(self):
+        items = server._meal_items_from({"items": [{
+            "name": "Dal", "calories": 150, "protein": 9, "carbs": 20, "fat": 4,
+        }]})
+        self.assertEqual(items[0]["portion"], "")
+
+    def test_a_non_string_portion_is_ignored(self):
+        items = server._meal_items_from({"items": [{
+            "name": "Dal", "portion": 2, "calories": 150, "protein": 9, "carbs": 20, "fat": 4,
+        }]})
+        self.assertEqual(items[0]["portion"], "")
+
+    def test_empty_and_oversized_answers_are_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "did not find any food"):
+            server._meal_items_from({"items": []})
+        with self.assertRaisesRegex(RuntimeError, "too many"):
+            server._meal_items_from({"items": [{"name": "Dal"}] * (server.MAX_MEAL_ITEMS + 1)})
+
+
 if __name__ == "__main__":
     unittest.main()

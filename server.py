@@ -317,6 +317,38 @@ def suggest_nutrition(name, portion, env):
     }
 
 
+def _meal_items_from(result):
+    """Validate and trim the model's meal items before they reach the browser.
+
+    Names and portions are cut to the lengths the store accepts, so a verbose
+    model answer cannot produce rows that fail validation at save time.
+    """
+    if not isinstance(result, dict) or not isinstance(result.get("items"), list):
+        raise RuntimeError("AI did not return a list of meal items")
+    if not result["items"]:
+        raise RuntimeError("AI did not find any food in that description")
+    if len(result["items"]) > MAX_MEAL_ITEMS:
+        raise RuntimeError("AI returned too many meal items")
+
+    items = []
+    for entry in result["items"]:
+        if not isinstance(entry, dict):
+            raise RuntimeError("AI returned an invalid meal item")
+        name = entry.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise RuntimeError("AI returned a meal item without a name")
+        portion = entry.get("portion", "")
+        items.append({
+            "name": name.strip()[:store.MAX_NAME_LENGTH],
+            "portion": portion.strip()[:store.MAX_PORTION_LENGTH] if isinstance(portion, str) else "",
+            "calories": _number(entry, "calories"),
+            "protein": _number(entry, "protein"),
+            "carbs": _number(entry, "carbs"),
+            "fat": _number(entry, "fat"),
+        })
+    return items
+
+
 def parse_meal(text, env):
     """Split a free-text meal into validated per-item nutrition and totals.
 
@@ -341,29 +373,7 @@ def parse_meal(text, env):
         invalid_json_message="AI did not return valid meal data",
         meta=meta,
     )
-    if not isinstance(result, dict) or not isinstance(result.get("items"), list):
-        raise RuntimeError("AI did not return a list of meal items")
-    if not result["items"]:
-        raise RuntimeError("AI did not find any food in that description")
-    if len(result["items"]) > MAX_MEAL_ITEMS:
-        raise RuntimeError("AI returned too many meal items")
-
-    items = []
-    for entry in result["items"]:
-        if not isinstance(entry, dict):
-            raise RuntimeError("AI returned an invalid meal item")
-        name = entry.get("name")
-        if not isinstance(name, str) or not name.strip():
-            raise RuntimeError("AI returned a meal item without a name")
-        portion = entry.get("portion", "")
-        items.append({
-            "name": name.strip()[:MAX_TEXT_LENGTH],
-            "portion": portion.strip()[:120] if isinstance(portion, str) else "",
-            "calories": _number(entry, "calories"),
-            "protein": _number(entry, "protein"),
-            "carbs": _number(entry, "carbs"),
-            "fat": _number(entry, "fat"),
-        })
+    items = _meal_items_from(result)
 
     totals = {
         key: round(sum(item[key] for item in items), 1)
