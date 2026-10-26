@@ -603,6 +603,8 @@ function buildParsedRow(item, index){
       document.getElementById('parsedRows').replaceChildren();
       document.getElementById('parseResult').hidden=true;
       resetParsedTotals();
+      const save=document.getElementById('saveParsedBtn');
+      if(save) save.disabled=true;
       return;
     }
     paintParsedRows();
@@ -703,7 +705,7 @@ async function parseMeal(){
   setParseBusy(true);
   resetParsedTotals();
   const save=document.getElementById('saveParsedBtn');
-  if(save) save.disabled=true;
+  if(save){ save.disabled=true; save.textContent='Save to the record'; }
 
   try{
     const payload=await parseMealText(text);
@@ -732,6 +734,7 @@ function manualRow(){
   hideParseError();
   clearInlineErrors();
   parsedState.items.push({name:'',portion:'',calories:0,protein:0,carbs:0,fat:0});
+  document.getElementById('parseResult').hidden=false;
   if(!parsedState.editId){
     revealResult('Manual entry · nothing sent to the model · review before saving','Manual entry');
   }
