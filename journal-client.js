@@ -1,5 +1,5 @@
 /* NutriParse — the browser side of the shared journal store.
-   Both the Compose page and the legacy journal load this file, so neither of
+   Both the Compose page and the Food Journal load this file, so neither of
    them keeps its own copy of the journal. The server owns data.json; every
    call here returns the whole document the server just saved. */
 

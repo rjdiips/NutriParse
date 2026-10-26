@@ -961,7 +961,7 @@ wireCopy(cookParts);
 /* ---------- journal store ---------- */
 
 /* The journal lives in the server's data.json rather than in this browser, so
-   the Journal view, the legacy journal, and the CLI all read one document.
+   the Compose page's Journal view, the Food Journal, and the CLI all read one document.
    journal-client.js holds the calls; every one of them answers with the whole
    store, so the copy below is always whatever the server last saved. */
 

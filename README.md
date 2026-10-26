@@ -21,7 +21,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#
 - Every parsed name and number stays editable, and totals are recomputed from the rows you can see
 - Failures surface as typed messages with a retry; `?sample=1` previews a resolved result without a model call
 - Seven-day daily summary with progress toward the goal in the CLI
-- One journal store: the web app, the CLI, and the retained legacy journal all read and write the same `data.json` through `store.py`
+- One journal store: the web app, the CLI, and the Food Journal all read and write the same `data.json` through `store.py`
 - A committed evaluation harness scores `/api/parse` against reference calorie ranges, so claims about the model's accuracy carry a table and a date
 
 ## Tech stack
@@ -167,7 +167,7 @@ The URL above is Ollama's default; the alternatives are listed below. `LLM_MODEL
 irm https://llama.app/install.ps1 | iex
 ```
 
-Or download a Windows build from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases). On an NVIDIA GPU take `llama-<build>-bin-win-cuda-x64.zip` **and** the matching `cudart-<build>-bin-win-cuda-x64.zip`; on CPU-only machines take `llama-<build>-bin-win-cpu-x64.zip`. Extract so `llama-server.exe` lands at `.llm-tools\llama-server.exe` (or add it to `PATH`); `.llm-tools/` is gitignored. `start_llm.bat` uses the `llama` CLI when it is on `PATH` and falls back to `llama-server.exe`.
+Or download a Windows build from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases). On an NVIDIA GPU take `llama-<build>-bin-win-cuda-x64.zip` **and** the matching `cudart-<build>-bin-win-cuda-x64.zip`; on CPU-only machines take `llama-<build>-bin-win-cpu-x64.zip`. Extract so `llama-server.exe` lands at `.llm-tools\llama-server.exe` (or add it to `PATH`); `.llm-tools/` is gitignored. `start_llm.bat` uses the `llama` CLI when a llama.cpp build of it is on `PATH`, and otherwise falls back to `llama-server.exe`.
 
 **2. Fetch a GGUF model.** Any instruct model that follows the prompt and emits JSON works. A `Q4_K_M` quant is the usual starting point — roughly 5–6 GB for a 9B model, and small enough for an 8 GB laptop GPU. Put the file under `models\<model-name>\` (or a shared `D:\models\<model-name>\`); GGUF embeds the tokenizer and chat template, so the one file is all the app needs.
 
@@ -177,7 +177,7 @@ curl.exe -L -o models\qwen3.5-9b\qwen3.5-9b-Q4_K_M.gguf `
   "https://huggingface.co/<org>/<repo>/resolve/main/<file>.gguf?download=true"
 ```
 
-Replace the `<…>` placeholders with the repository and filename you chose. `start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` to a full path to use a file somewhere else.
+Replace the `<…>` placeholders with the repository and filename you chose. `start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` in `.env` (or the shell) to a full path to use a file somewhere else.
 
 **3. Start the server.** Run `.\start_llm.bat`, or the same command by hand:
 
@@ -207,7 +207,7 @@ curl http://localhost:8080/v1/models
 python server.py
 ```
 
-Open http://localhost:8100/, compose a meal, and check the request-details panel. A healthy call shows provider `local`, your alias, a latency in seconds, token counts, and the parsed items. `/api/parse` is also what the legacy journal's Log a meal tab and the CLI's estimate option use, so all three exercise the same path.
+Open http://localhost:8100/, compose a meal, and check the request-details panel. A healthy call shows provider `local`, your alias, a latency in seconds, token counts, and the parsed items. `/api/parse` is also what the Food Journal's Log a meal tab and the CLI's estimate option use, so all three exercise the same path.
 
 #### Ollama
 
@@ -263,14 +263,16 @@ Every Estimate and Cook result carries this panel: which provider answered, the 
 
 Text-model requests are recorded in `logs/llm.log`; image-generation requests
 are recorded separately in `logs/image_generation.log`. Entries include a
-request ID, model or image dimensions and steps, duration, outcome, and useful
-image-service error details. Recipe text, prompts, image data, API credentials,
-and raw provider payloads are not logged. Each log rotates at 2 MB, keeping up to
-five older files.
+request ID, model or image dimensions and steps, duration, and outcome. A failed
+model call also records the upstream status and a truncated, sanitised excerpt
+of the provider's error response so a 502 can be diagnosed; that excerpt can
+still contain fragments of the prompt. Prompts are not logged on the success
+path, and image data and API credentials are never logged. Each log rotates at
+2 MB, keeping up to five older files.
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, atomic writes, legacy numeric ids, corrupt files, and concurrent writers. The FastAPI surface has a second suite covering the route allowlist, the journal round trip, body validation, and the same-origin check on writes:
+The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, and the rules that trim and validate model output:
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -312,4 +314,6 @@ The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 202
 - `.env.example` — documented environment variables template
 - `README.md` — this file
 - `setup_image_generator.bat` / `start_image_generator.bat` — CUDA recipe image service (stable-diffusion.cpp + SDXL-Turbo)
+- `start_llm.bat` — starts a local llama.cpp server with the settings the app expects
 - `.image-tools/`, `models/` — downloaded image runtime and models (ignored by Git)
+- `.llm-tools/` — downloaded llama.cpp runtime (ignored by Git)

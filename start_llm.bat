@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal
 cd /d "%~dp0"
 
 rem ---- settings -------------------------------------------------------------
@@ -13,10 +13,23 @@ set "CTX=8192"
 rem Layers to offload to the GPU: 99 = all, 0 = CPU only.
 set "NGL=99"
 
+rem ---- optional override from .env ------------------------------------------
+rem Only LLM_MODEL_FILE is read here: it is a convenience for pointing at a GGUF
+rem outside models\ and D:\models\, and .env is the one place the repo keeps it.
+if exist ".env" (
+  for /f "usebackq eol=# tokens=1,* delims==" %%a in (".env") do (
+    if /i "%%a"=="LLM_MODEL_FILE" set "LLM_MODEL_FILE=%%b"
+  )
+)
+
 rem ---- locate the server ----------------------------------------------------
-rem Prefer the modern `llama serve` CLI; fall back to a standalone llama-server.
+rem Prefer the modern `llama serve` CLI, but only accept it when it really is
+rem llama.cpp: an unrelated tool called llama.exe on PATH must not shadow the
+rem pinned server. Otherwise fall back to a standalone llama-server.exe.
 set "LLAMA_CLI="
-for /f "delims=" %%f in ('where llama.exe 2^>nul') do if not defined LLAMA_CLI set "LLAMA_CLI=%%f"
+for /f "delims=" %%f in ('where llama.exe 2^>nul') do if not defined LLAMA_CLI (
+  "%%f" --version 2>nul | findstr /i /c:"version:" >nul && set "LLAMA_CLI=%%f"
+)
 set "LLAMA_SERVER="
 if exist ".llm-tools\llama-server.exe" set "LLAMA_SERVER=.llm-tools\llama-server.exe"
 if not defined LLAMA_SERVER for /f "delims=" %%f in ('where llama-server.exe 2^>nul') do if not defined LLAMA_SERVER set "LLAMA_SERVER=%%f"
@@ -33,14 +46,31 @@ rem ---- locate the model -----------------------------------------------------
 rem Priority: LLM_MODEL_FILE, models\<name>, D:\models\<name>, then any model
 rem in the repo-local models\ folder.
 set "MODEL=%LLM_MODEL_FILE%"
+if defined MODEL set "MODEL=%MODEL:"=%"
+if defined MODEL if not exist "%MODEL%" (
+  echo LLM_MODEL_FILE points at a file that does not exist:
+  echo   %MODEL%
+  pause
+  exit /b 1
+)
 if not defined MODEL call :find_model "models\%MODEL_NAME%"
 if not defined MODEL call :find_model "D:\models\%MODEL_NAME%"
 if not defined MODEL call :find_model "models"
 if not defined MODEL (
   echo No .gguf file found for "%MODEL_NAME%".
-  echo Looked in models\%MODEL_NAME%\ and D:\models\%MODEL_NAME%\.
-  echo Download a GGUF ^(Q4_K_M is a good default^), or set LLM_MODEL_FILE
-  echo to the full path of the model before running this script.
+  echo Looked in models\%MODEL_NAME%\, D:\models\%MODEL_NAME%\, and models\.
+  echo Download a GGUF ^(Q4_K_M is a good default^) to one of those folders,
+  echo or set LLM_MODEL_FILE to the full path of the model before running this
+  echo script.
+  pause
+  exit /b 1
+)
+
+rem ---- check the port -------------------------------------------------------
+netstat -ano | findstr /r /c:":%PORT% .*LISTENING" >nul
+if not errorlevel 1 (
+  echo Port %PORT% is already in use. Stop the server that owns it, or change
+  echo PORT here and LLM_BASE_URL in .env to a matching port.
   pause
   exit /b 1
 )
