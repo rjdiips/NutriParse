@@ -230,6 +230,7 @@ def ai_suggest():
     if use == "y":
         entry = {
             "name": result.get("name", name),
+            "portion": portion,
             "calories": float(result.get("calories", 0)),
             "protein": float(result.get("protein", 0)),
             "carbs": float(result.get("carbs", 0)),

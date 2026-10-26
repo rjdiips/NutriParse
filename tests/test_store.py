@@ -239,6 +239,19 @@ class TestUpdate(StoreTestCase):
         self.assertEqual((row["name"], row["calories"], row["portion"]),
                          ("Dal", 150.0, "1 bowl"))
 
+    def test_update_accepts_a_legacy_numeric_id(self):
+        self.path.write_text(json.dumps({
+            "calorie_goal": 2000,
+            "entries": [{"id": 1750000000.5, "name": "Dal", "calories": 150, "protein": 9,
+                         "carbs": 20, "fat": 4, "meal": "lunch", "date": "2026-10-20"}],
+        }), encoding="utf-8")
+        updated = store.update_entry(self.path, 1750000000.5, [
+            self.entry(name="Dal, extra", calories=200, portion="1 bowl"),
+        ])
+        self.assertEqual(len(updated["entries"]), 1)
+        self.assertEqual(updated["entries"][0]["id"], 1750000000.5)
+        self.assertEqual(updated["entries"][0]["name"], "Dal, extra")
+
     def test_update_can_turn_one_row_into_several(self):
         document = store.add_entries(self.path, [
             self.entry(name="Roti"), self.entry(name="Dal"),

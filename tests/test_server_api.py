@@ -273,15 +273,35 @@ class TestAiAndImages(ApiTestCase):
         self.assert_error(response, 503, "Local image generation is disabled")
 
 
+def complete_recipe(steps=5, **overrides):
+    """One sound recipe, as the model is asked to shape it."""
+    recipe = {
+        "title": "Dal",
+        "description": "A bowl",
+        "steps": [f"Step {i}" for i in range(steps)],
+        "nutrition": {"calories": 300, "protein": 12, "carbs": 40, "fat": 8},
+        "servings": 2,
+        "ingredients_used": ["dal"],
+        "pantry_extras": [],
+    }
+    recipe.update(overrides)
+    return recipe
+
+
+def complete_answer(recipe=None):
+    recipe = complete_recipe() if recipe is None else recipe
+    return {"recipes": [recipe for _ in range(server.RECIPE_COUNT)]}
+
+
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
 class TestRecipeRules(unittest.TestCase):
     """The shape check that decides whether a recipe answer is usable."""
 
-    def recipe(self, steps=5):
-        return {"title": "Dal", "description": "A bowl", "steps": [f"Step {i}" for i in range(steps)]}
+    def recipe(self, steps=5, **overrides):
+        return complete_recipe(steps, **overrides)
 
     def test_a_complete_answer_has_no_shortcomings(self):
-        self.assertIsNone(server._recipe_shortcomings({"recipes": [self.recipe() for _ in range(3)]}))
+        self.assertIsNone(server._recipe_shortcomings(complete_answer()))
 
     def test_the_wrong_number_of_recipes_is_a_shortcoming(self):
         for count in (0, 1, 2, 4):
@@ -302,11 +322,56 @@ class TestRecipeRules(unittest.TestCase):
         no_steps = {"title": "Dal", "description": "A bowl"}
         self.assertIn("no steps", server._recipe_shortcomings({"recipes": [no_steps, self.recipe(), self.recipe()]}))
 
+    def test_missing_title_description_or_nutrition_is_a_shortcoming(self):
+        for field, message in (("title", "no title"), ("description", "no description"),
+                               ("nutrition", "no nutrition")):
+            with self.subTest(field=field):
+                broken = self.recipe(**{field: "" if field != "nutrition" else None})
+                self.assertIn(message, server._recipe_shortcomings(
+                    {"recipes": [broken, self.recipe(), self.recipe()]}
+                ))
+
     def test_the_prompt_asks_for_three_sound_recipes(self):
         prompt = server._recipe_prompt(["dal", "rice"], "spinach")
         self.assertIn("exactly three", prompt)
         self.assertIn("number of servings", prompt)
         self.assertNotIn("instructions. servings", prompt)
+
+
+@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
+class TestRecipeRepair(unittest.TestCase):
+    """A malformed answer earns one repair attempt, then the request fails."""
+
+    def setUp(self):
+        self._original = server._request_ai
+        self.addCleanup(setattr, server, "_request_ai", self._original)
+        self.prompts = []
+
+    def answers(self, *replies):
+        def request(prompt, env, system_prompt, **kwargs):
+            self.prompts.append(prompt)
+            return replies[len(self.prompts) - 1]
+        server._request_ai = request
+
+    def test_a_sound_first_answer_is_not_repaired(self):
+        self.answers(complete_answer())
+        result = server.suggest_recipes(["dal"], "", {})
+        self.assertEqual(len(self.prompts), 1)
+        self.assertEqual(len(result["recipes"]), server.RECIPE_COUNT)
+
+    def test_a_bad_first_answer_is_repaired_once(self):
+        self.answers(complete_answer(complete_recipe(steps=2)), complete_answer())
+        result = server.suggest_recipes(["dal"], "", {})
+        self.assertEqual(len(self.prompts), 2)
+        self.assertIn("rejected", self.prompts[1])
+        self.assertEqual(len(result["recipes"]), server.RECIPE_COUNT)
+
+    def test_a_bad_second_answer_fails_closed(self):
+        self.answers(complete_answer(complete_recipe(steps=2)),
+                     complete_answer(complete_recipe(steps=2)))
+        with self.assertRaisesRegex(RuntimeError, "complete recipes"):
+            server.suggest_recipes(["dal"], "", {})
+        self.assertEqual(len(self.prompts), 2)
 
 
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
@@ -341,6 +406,21 @@ class TestMealItemRules(unittest.TestCase):
             server._meal_items_from({"items": []})
         with self.assertRaisesRegex(RuntimeError, "too many"):
             server._meal_items_from({"items": [{"name": "Dal"}] * (server.MAX_MEAL_ITEMS + 1)})
+
+
+@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
+class TestNutritionSuggest(unittest.TestCase):
+    """A single-item estimate has to fit the store just like a parsed meal."""
+
+    def test_a_long_suggested_name_is_cut_to_the_store_limit(self):
+        original = server._chat_completion
+        self.addCleanup(setattr, server, "_chat_completion", original)
+        server._chat_completion = lambda *args, **kwargs: {
+            "name": "n" * 300, "calories": 100, "protein": 1, "carbs": 2, "fat": 3,
+        }
+        result = server.suggest_nutrition("Dal", "1 bowl", {})
+        self.assertEqual(len(result["name"]), server.store.MAX_NAME_LENGTH)
+        server.store.normalize_entry({**result, "meal": "lunch", "date": "2026-10-26"})
 
 
 if __name__ == "__main__":

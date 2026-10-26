@@ -309,7 +309,7 @@ def suggest_nutrition(name, portion, env):
     if not isinstance(suggested_name, str) or not suggested_name.strip():
         suggested_name = name
     return {
-        "name": suggested_name.strip()[:MAX_TEXT_LENGTH],
+        "name": suggested_name.strip()[:store.MAX_NAME_LENGTH],
         "calories": _number(result, "calories"),
         "protein": _number(result, "protein"),
         "carbs": _number(result, "carbs"),
@@ -433,6 +433,12 @@ def _recipe_shortcomings(result):
         usable = [step for step in steps if isinstance(step, str) and step.strip()]
         if not MIN_RECIPE_STEPS <= len(usable) <= MAX_RECIPE_STEPS:
             return f"recipe {index} has {len(usable)} usable steps"
+        if not isinstance(recipe.get("title"), str) or not recipe["title"].strip():
+            return f"recipe {index} has no title"
+        if not isinstance(recipe.get("description"), str) or not recipe["description"].strip():
+            return f"recipe {index} has no description"
+        if not isinstance(recipe.get("nutrition"), dict):
+            return f"recipe {index} has no nutrition"
     return None
 
 
@@ -475,7 +481,7 @@ def suggest_recipes(ingredients, use_soon, env):
             if not isinstance(value, list) or any(not isinstance(x, str) for x in value):
                 raise RuntimeError("AI returned invalid recipe ingredients")
             return [x.strip()[:MAX_TEXT_LENGTH] for x in value[:20] if x.strip()]
-        clean_steps = [s.strip()[:500] for s in steps[:12] if isinstance(s, str) and s.strip()]
+        clean_steps = [s.strip()[:500] for s in steps if isinstance(s, str) and s.strip()][:MAX_RECIPE_STEPS]
         recipes.append({
             "title": title.strip()[:120], "description": description.strip()[:300],
             "ingredients_used": text_list("ingredients_used"), "pantry_extras": text_list("pantry_extras"),
