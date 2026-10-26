@@ -603,8 +603,10 @@ function buildParsedRow(item, index){
       document.getElementById('parsedRows').replaceChildren();
       document.getElementById('parseResult').hidden=true;
       resetParsedTotals();
+      /* With every row gone there is nothing left to edit or save. */
+      parsedState.editId=null;
       const save=document.getElementById('saveParsedBtn');
-      if(save) save.disabled=true;
+      if(save){ save.disabled=true; save.textContent='Save to the record'; }
       return;
     }
     paintParsedRows();
@@ -655,6 +657,11 @@ function recomputeParsed(){
 }
 
 function renderParsed(items, sub, kicker='The plate', focus=false){
+  /* A fresh set of rows starts in "add" mode; editEntry re-enters edit mode
+     after this call, so a recipe seed or a parse can never overwrite an edit. */
+  parsedState.editId=null;
+  const save=document.getElementById('saveParsedBtn');
+  if(save) save.textContent='Save to the record';
   parsedState.items=items.map(item=>({
     name:String(item.name||''),
     portion:String(item.portion||''),
@@ -776,20 +783,21 @@ async function saveParsed(){
   }));
 
   const editId=parsedState.editId;
+  const editing=editId!==null && editId!==undefined;
   const saveBtn=document.getElementById('saveParsedBtn');
   saveBtn.disabled=true;
   saveBtn.innerHTML='<span class="spinner"></span>Saving…';
   try{
-    applyData(editId
+    applyData(editing
       ? await JournalStore.updateEntries(editId,entries)
       : await JournalStore.addEntries(entries));
   }catch(error){
     saveBtn.disabled=false;
-    saveBtn.textContent=editId?'Save changes':'Save to the record';
+    saveBtn.textContent=editing?'Save changes':'Save to the record';
     toast('Could not save: '+error.message,'error');
     return;
   }
-  toast(editId
+  toast(editing
     ? `Updated ${entries.length} ${entries.length===1?'item':'items'} on ${dateStr}.`
     : `Saved ${entries.length} ${entries.length===1?'item':'items'} to ${meal} on ${dateStr}.`,'success');
   clearParsed();
@@ -898,12 +906,13 @@ function editEntry(id){
   document.getElementById('date').value=entry.date||today();
   document.getElementById('mealText').value=entry.name;
   updateMealCount();
-  parsedState.editId=entry.id;
   renderParsed(
     [{name:entry.name,portion:entry.portion||'',calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat}],
     `Editing “${entry.name}” · saving replaces this entry`,
     'From the archive'
   );
+  /* renderParsed resets to add mode, so re-assert the edit we are starting. */
+  parsedState.editId=entry.id;
   const save=document.getElementById('saveParsedBtn');
   if(save) save.textContent='Save changes';
 }
@@ -918,6 +927,8 @@ async function deleteEntry(id){
     toast('Could not delete: '+error.message,'error');
     return;
   }
+  /* Do not leave the editor pointed at a row that no longer exists. */
+  if(parsedState.editId!==null && String(parsedState.editId)===String(id)) clearParsed();
   render();
 }
 
