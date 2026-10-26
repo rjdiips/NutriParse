@@ -1,6 +1,6 @@
 /* ============================================================
    NutriParse — The Food Journal
-   Editorial system borrowed from the Invent a meal card.
+   Editorial system borrowed from the Create a meal card.
    ============================================================ */
 
 /* Tokens & base */
@@ -11,8 +11,8 @@
   --ink: #23261f;
   --ink-soft: #353a30;
   --text: #4a4f45;
-  --muted: #83877c;
-  --faint: #a5a89c;
+  --muted: #63675c;
+  --faint: #6b6f64;
   --line: #ded9cb;
   --line-2: #c9c3b2;
   --olive: #5b6a4e;
@@ -149,7 +149,6 @@ button:disabled { cursor: not-allowed; opacity: .7; }
   border: 0;
   border-bottom: 1px solid var(--line-2);
   border-radius: 0;
-  outline: none;
   background: transparent;
   color: var(--ink);
   font-size: 16px;
@@ -602,7 +601,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .a-nav__num { color: var(--faint); font-size: 8px; letter-spacing: .1em; }
 .a-nav__item:hover { color: var(--ink); }
 .a-nav__item.is-active, .a-nav__item.active { border-bottom-color: var(--ink); color: var(--ink); }
-.a-nav__item.is-active .a-nav__num, .a-nav__item.active .a-nav__num { color: var(--moss); }
+.a-nav__item.is-active .a-nav__num, .a-nav__item.active .a-nav__num { color: var(--olive); }
 
 .a-display {
   max-width: 15ch;
@@ -643,7 +642,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .a-lead__copy { display: flex; flex-direction: column; justify-content: center; padding: 8px 0; }
 .a-start-here { margin: 24px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .a-start-here button { padding: 0; border: 0; border-bottom: 1px solid var(--moss); border-radius: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
-.a-start-here button:hover { color: var(--moss); }
+.a-start-here button:hover { color: var(--olive); }
 .a-start-here button:focus-visible { outline: 2px solid var(--moss); outline-offset: 3px; }
 .a-progress { max-width: 530px; margin-top: 32px; }
 .a-progress__num { display: flex; align-items: baseline; gap: 11px; }
@@ -909,7 +908,6 @@ button:disabled { cursor: not-allowed; opacity: .7; }
   border: 0;
   border-bottom: 1px solid transparent;
   border-radius: 0;
-  outline: none;
   background: transparent;
   color: var(--ink);
   font-size: 14.5px;
@@ -960,7 +958,6 @@ button:disabled { cursor: not-allowed; opacity: .7; }
   padding: 10px 2px 9px 24px;
   border: 0;
   border-bottom: 1px solid var(--line-2);
-  outline: none;
   background: transparent;
   color: var(--ink);
   font-size: 14px;
@@ -1001,7 +998,7 @@ button:disabled { cursor: not-allowed; opacity: .7; }
 .a-presets button:hover { border-color: var(--line-2); color: var(--ink); background: var(--paper); }
 .a-editor-note { min-height: 16px; margin: 16px 0 0; color: var(--faint); font-family: var(--sans); font-size: 9.5px; line-height: 1.6; }
 
-/* Invent a meal */
+/* Create a meal */
 .a-alch { animation: fade .35s ease both; }
 .a-alch__grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 56px; align-items: start; }
 #panel-alchemist .a-section__head { border-bottom: 0; }

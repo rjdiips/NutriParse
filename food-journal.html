@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -476,9 +476,10 @@ document.getElementById('conjureBtn').addEventListener('click',async()=>{
   const status=document.getElementById('alchemistStatus');
   const results=document.getElementById('recipeResults');
   if(!ingredients){ status.textContent='Add at least one ingredient to begin the experiment.'; document.getElementById('alchemistIngredients').focus(); return; }
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Inventing…';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Creating…';
   status.textContent='Reading the fridge…';
   results.replaceChildren();
+  results.setAttribute('aria-busy','true');
   try{
     const result=await conjureRecipes(ingredients,useSoon);
     if(!Array.isArray(result.recipes)||result.recipes.length===0) throw new Error('No recipe ideas came back. Please try again.');
