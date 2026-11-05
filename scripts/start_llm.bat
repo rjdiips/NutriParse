@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 rem ---- settings -------------------------------------------------------------
 rem Port the app expects. Keep in sync with LLM_BASE_URL in .env.

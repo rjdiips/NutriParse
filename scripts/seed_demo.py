@@ -5,19 +5,23 @@ Writes `data.demo.json` — never `data.json` — with a week of plausible entri
 anchored to today, so the Journal view has a full today card, history, and a
 varied set of days (one over goal, one light) to photograph.
 
-    python seed_demo.py
+    python scripts/seed_demo.py
     python server.py --demo
     http://localhost:8100/?view=journal
 
 Re-run the seed whenever the dates should move up to the current day.
 """
 
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-import store
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 
-BASE_DIR = Path(__file__).resolve().parent
+from app.journal import store  # noqa: E402 - the package root has to be importable first
+
+BASE_DIR = REPO_ROOT
 DEMO_PATH = BASE_DIR / "data.demo.json"
 DEMO_GOAL = 2200
 

@@ -21,7 +21,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#
 - Every parsed name and number stays editable, and totals are recomputed from the rows you can see
 - Failures surface as typed messages with a retry; `?sample=1` previews a resolved result without a model call
 - Seven-day daily summary with progress toward the goal in the CLI
-- One journal store: the web app, the CLI, and the Food Journal all read and write the same `data.json` through `store.py`
+- One journal store: the web app, the CLI, and the Food Journal all read and write the same `data.json` through `app/journal/store.py`
 - A committed evaluation harness scores `/api/parse` against reference calorie ranges, so claims about the model's accuracy carry a table and a date
 
 ## Tech stack
@@ -96,18 +96,18 @@ Add `?sample=1` or `?sample=cook` to preview either resolved Compose state witho
 
 ### Demo data for screenshots
 
-`seed_demo.py` writes a week of sample entries to `data.demo.json`, dated relative to today, so the Journal view has a populated today card and several days of history — including one day over the goal and one light day. Your real `data.json` is never read or written. The Journal screenshot above came from this demo file.
+`scripts/seed_demo.py` writes a week of sample entries to `data.demo.json`, dated relative to today, so the Journal view has a populated today card and several days of history — including one day over the goal and one light day. Your real `data.json` is never read or written. The Journal screenshot above came from this demo file.
 
 ```powershell
-python seed_demo.py
+python scripts/seed_demo.py
 python server.py --demo
 ```
 
-Open http://localhost:8100/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
+Open http://localhost:8100/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `scripts/seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
 
 ### Where the journal lives
 
-The server owns `data.json`; the browser keeps no copy of its own. Saving in Compose posts to the server, every mutation answers with the whole updated document, and both views render from that answer. `store.py` holds the rules both front ends share — validation, id assignment, atomic writes — and the CLI calls it directly because it runs on the same machine as the file.
+The server owns `data.json`; the browser keeps no copy of its own. Saving in Compose posts to the server, every mutation answers with the whole updated document, and both views render from that answer. `app/journal/store.py` holds the rules both front ends share — validation, id assignment, atomic writes — and the CLI calls it directly because it runs on the same machine as the file.
 
 | Endpoint | Body | Returns |
 | --- | --- | --- |
@@ -125,7 +125,7 @@ Entries saved by an earlier version of the web app, in `localStorage` under `ct_
 
 ### Local recipe images (NVIDIA CUDA)
 
-Recipe images use an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` endpoint. On an NVIDIA GPU, run `setup_image_generator.bat` once. It downloads the stable-diffusion.cpp CUDA build (about 900 MB including the CUDA runtime) and Stability AI's SDXL-Turbo checkpoint (6.9 GB). Then launch `start_image_generator.bat` before using Cook mode. The service binds to `127.0.0.1:7860`, uses the GPU, and produces 512×512 images in 6 steps, typically in a few seconds each on an 8 GB laptop GPU. First startup loads the checkpoint and can take 20–40 seconds.
+Recipe images use an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` endpoint. On an NVIDIA GPU, run `scripts/setup_image_generator.bat` once. It downloads the stable-diffusion.cpp CUDA build (about 900 MB including the CUDA runtime) and Stability AI's SDXL-Turbo checkpoint (6.9 GB). Then launch `scripts/start_image_generator.bat` before using Cook mode. The service binds to `127.0.0.1:7860`, uses the GPU, and produces 512×512 images in 6 steps, typically in a few seconds each on an 8 GB laptop GPU. First startup loads the checkpoint and can take 20–40 seconds.
 
 Turbo checkpoints expect CFG 1 and few sampling steps; the start script passes both. It also enables `--offload-to-cpu` so model weights can move through system RAM instead of reserving nearly all GPU memory; this reduces peak VRAM use at the cost of some speed. Image size and steps are read from `.env` (`LOCAL_IMAGE_WIDTH`, `LOCAL_IMAGE_HEIGHT`, `LOCAL_IMAGE_STEPS`). If you replace SDXL-Turbo with a regular checkpoint such as SD 1.5, set `LOCAL_IMAGE_STEPS=20` in `.env` and adjust `--cfg-scale` in the start script. Binaries and model files live in `.image-tools/` and `models/`, both excluded by `.gitignore`.
 
@@ -159,7 +159,7 @@ The URL above is Ollama's default; the alternatives are listed below. `LLM_MODEL
 
 #### llama.cpp (alternative local setup)
 
-`start_llm.bat` wraps the server command and serves `http://localhost:8080/v1`.
+`scripts/start_llm.bat` wraps the server command and serves `http://localhost:8080/v1`.
 
 **1. Install llama.cpp.** The simplest route is the `llama` CLI installer, which also gives you `llama serve`:
 
@@ -167,7 +167,7 @@ The URL above is Ollama's default; the alternatives are listed below. `LLM_MODEL
 irm https://llama.app/install.ps1 | iex
 ```
 
-Or download a Windows build from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases). On an NVIDIA GPU take `llama-<build>-bin-win-cuda-x64.zip` **and** the matching `cudart-<build>-bin-win-cuda-x64.zip`; on CPU-only machines take `llama-<build>-bin-win-cpu-x64.zip`. Extract so `llama-server.exe` lands at `.llm-tools\llama-server.exe` (or add it to `PATH`); `.llm-tools/` is gitignored. `start_llm.bat` uses the `llama` CLI when a llama.cpp build of it is on `PATH`, and otherwise falls back to `llama-server.exe`.
+Or download a Windows build from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases). On an NVIDIA GPU take `llama-<build>-bin-win-cuda-x64.zip` **and** the matching `cudart-<build>-bin-win-cuda-x64.zip`; on CPU-only machines take `llama-<build>-bin-win-cpu-x64.zip`. Extract so `llama-server.exe` lands at `.llm-tools\llama-server.exe` (or add it to `PATH`); `.llm-tools/` is gitignored. `scripts/start_llm.bat` uses the `llama` CLI when a llama.cpp build of it is on `PATH`, and otherwise falls back to `llama-server.exe`.
 
 **2. Fetch a GGUF model.** Any instruct model that follows the prompt and emits JSON works. A `Q4_K_M` quant is the usual starting point — roughly 5–6 GB for a 9B model, and small enough for an 8 GB laptop GPU. Put the file under `models\<model-name>\` (or a shared `D:\models\<model-name>\`); GGUF embeds the tokenizer and chat template, so the one file is all the app needs.
 
@@ -177,9 +177,9 @@ curl.exe -L -o models\qwen3.5-9b\qwen3.5-9b-Q4_K_M.gguf `
   "https://huggingface.co/<org>/<repo>/resolve/main/<file>.gguf?download=true"
 ```
 
-Replace the `<…>` placeholders with the repository and filename you chose. `start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` in `.env` (or the shell) to a full path to use a file somewhere else.
+Replace the `<…>` placeholders with the repository and filename you chose. `scripts/start_llm.bat` looks for `models\qwen3.5-9b\*.gguf`, then `D:\models\qwen3.5-9b\*.gguf`, then any model in `models\`; it skips `mmproj` projectors. Set `LLM_MODEL_FILE` in `.env` (or the shell) to a full path to use a file somewhere else.
 
-**3. Start the server.** Run `.\start_llm.bat`, or the same command by hand:
+**3. Start the server.** Run `.\scripts\start_llm.bat`, or the same command by hand:
 
 ```powershell
 llama serve -m models\qwen3.5-9b\qwen3.5-9b-Q4_K_M.gguf `
@@ -297,23 +297,51 @@ The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 202
 
 ## File layout
 
-- `nutriparse.py` — command-line application source
-- `store.py` — the shared journal store: validation, atomic writes, totals, used by both the CLI and the server
-- `server.py` — FastAPI app serving the public assets plus the journal, AI and image endpoints
-- `requirements.txt` — backend dependencies (FastAPI, Uvicorn)
-- `requirements-dev.txt` — adds the HTTP test transport (`httpx`)
-- `nutriparse.html`, `nutriparse.css`, `nutriparse.js` — the app: the Compose and Journal views, served at `/`
-- `journal-client.js` — the browser side of the journal API, including the one-time `localStorage` migration
-- `food-journal.html`, `food-journal.css` — The Food Journal at `/food-journal.html`
-- `seed_demo.py` — writes `data.demo.json`, sample entries for screenshots; `server.py --demo` serves it instead of the real journal
-- `tests/` — store and FastAPI tests (`python -m unittest discover -s tests`)
-- `evals/` — the parse evaluation harness, its case fixtures, and the committed results
-- `screenshots/` — the screenshots used in this README
-- `data.json` — the journal, shared by the CLI and the web app (created on first write; ignored by Git)
-- `.env` — your OpenRouter API key (create from `.env.example`; do not commit)
-- `.env.example` — documented environment variables template
-- `README.md` — this file
-- `setup_image_generator.bat` / `start_image_generator.bat` — CUDA recipe image service (stable-diffusion.cpp + SDXL-Turbo)
-- `start_llm.bat` — starts a local llama.cpp server with the settings the app expects
-- `.image-tools/`, `models/` — downloaded image runtime and models (ignored by Git)
-- `.llm-tools/` — downloaded llama.cpp runtime (ignored by Git)
+The application is a package (`app/`) behind two small compatibility launchers,
+with the browser app under `web/`. Each folder owns one concern, so a change to
+recipes does not sit in the same file as a change to static routes.
+
+```text
+app/
+  config.py            paths, request limits, .env loading, provider resolution
+  logging_config.py    rotating model and image logs
+  main.py              FastAPI factory, router wiring, server entry point
+  cli.py               the interactive terminal front end
+  journal/store.py     shared journal: validation, atomic writes, totals
+  services/            llm.py, nutrition.py, recipes.py, images.py
+  web/
+    dependencies.py    JSON body rules, same-origin guard, journal/LLM helpers
+    http.py            one JSON response shape and exception handlers
+    static.py          /assets mount plus explicit page and legacy asset routes
+    routers/           health.py, journal.py, ai.py, images.py
+web/
+  pages/               nutriparse.html, food-journal.html
+  css/nutriparse/      base, compose, results, recipes, journal
+  css/food-journal/    base, layout, compose, journal, responsive
+  js/nutriparse.js     shared state, DOM refs, mode and view switching
+  js/nutriparse/       request, estimate, recipes, inspector, journal, samples, boot
+  js/food-journal.js   the second page's behaviour
+  js/journal-client.js browser side of the journal API and localStorage migration
+  assets/              favicon files
+scripts/
+  seed_demo.py         writes data.demo.json for screenshots
+  setup_image_generator.bat / start_image_generator.bat  CUDA image service
+  start_llm.bat        starts a local llama.cpp server with the expected settings
+tests/                 store, asset-link, and FastAPI tests
+evals/                 parse evaluation harness, fixtures, and committed results
+screenshots/           the screenshots used in this README
+server.py              compatibility launcher for `python server.py` / `uvicorn server:app`
+nutriparse.py          compatibility launcher for the CLI
+requirements.txt       backend dependencies (FastAPI, Uvicorn)
+requirements-dev.txt   adds the HTTP test transport (`httpx`)
+data.json              the journal, shared by the CLI and the web app (created on first write; ignored by Git)
+.env                   your OpenRouter API key (create from `.env.example`; do not commit)
+.image-tools/, models/ downloaded image runtime and models (ignored by Git)
+.llm-tools/            downloaded llama.cpp runtime (ignored by Git)
+```
+
+The public asset URLs are stable: pages still load at `/` and
+`/food-journal.html`, and the older `/nutriparse.js`, `/nutriparse.css`,
+`/journal-client.js`, and `/food-journal.css` URLs remain as compatibility
+aliases. New files are served from `/assets/`, which mounts only `web/`; source,
+`.env`, and journals stay outside the reachable tree.

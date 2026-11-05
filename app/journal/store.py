@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The journal store: one JSON document, one set of rules, two front ends.
 
-The CLI (`nutriparse.py`) and the web app's HTTP API (`server.py`) both read and
-write `data.json` through this module, so the two surfaces share one store
+The CLI (``app.cli``) and the web app's HTTP API (``app.web``) both read and
+write ``data.json`` through this module, so the two surfaces share one store
 instead of keeping separate ones. The server owns the file; the CLI talks to it
 directly because it runs on the same machine as the file.
 
@@ -20,7 +20,8 @@ import uuid
 from datetime import date, datetime
 from pathlib import Path
 
-DEFAULT_PATH = Path(__file__).resolve().parent / "data.json"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DEFAULT_PATH = BASE_DIR / "data.json"
 DEFAULT_GOAL = 2000
 MAX_GOAL = 20000
 MAX_ENTRIES_PER_WRITE = 50

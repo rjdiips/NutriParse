@@ -1,0 +1,7 @@
+/* Legacy entry point for /nutriparse.css.
+   The surface is split under web/css/nutriparse/ and served from /assets/. */
+@import url("/assets/css/nutriparse/base.css");
+@import url("/assets/css/nutriparse/compose.css");
+@import url("/assets/css/nutriparse/results.css");
+@import url("/assets/css/nutriparse/recipes.css");
+@import url("/assets/css/nutriparse/journal.css");

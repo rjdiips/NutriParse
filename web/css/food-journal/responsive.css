@@ -1,0 +1,164 @@
+/* Responsive */
+@media (max-width: 1080px) {
+  .a-lead { gap: 36px; }
+  .a-log, .a-alch__grid { gap: 38px; }
+  .a-editorial-note { margin-top: 24px; }
+  .a-goal { gap: 40px; }
+}
+
+@media (max-width: 920px) {
+  .recipe-aside { margin-top: 0; }
+  .recipe-nutrition { margin-top: 0; }
+  .a-page { padding: 0 22px 60px; }
+  .a-lead { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+  .a-lead__plate .macro-plate { min-height: 340px; }
+  .a-log, .a-goal, .a-alch__grid { grid-template-columns: minmax(0, 1fr); gap: 34px; }
+  .a-journal__head { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .a-search { width: 100%; max-width: 420px; }
+  .a-alch__results { margin-top: 30px; }
+}
+
+@media (max-width: 720px) {
+  .a-header { gap: 8px 16px; padding-top: 18px; padding-bottom: 10px; }
+  .a-header__meta { justify-content: flex-start; }
+  .a-masthead__title { font-size: clamp(28px, 7vw, 36px); }
+  .a-nav { margin-bottom: 28px; }
+  .recipe-card { grid-template-columns: minmax(0, 1fr); }
+  .recipe-media { min-height: 0; aspect-ratio: 16 / 10; }
+  .recipe-body { padding: 20px 22px; }
+  .recipe-title { font-size: 24px; }
+  .recipe-detail { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .recipe-footer { margin-top: 8px; padding-top: 0; }
+  .a-form__grid { grid-template-columns: minmax(0, 1fr); }
+  .a-grid--head { display: none; }
+  .a-item {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "name name name portion portion remove"
+      "cal cal prot prot carb carb"
+      "fat fat . . . .";
+    gap: 10px 12px;
+    padding: 14px 0;
+  }
+  .a-item > .a-cell:nth-child(1) { grid-area: name; }
+  .a-item > .a-cell:nth-child(2) { grid-area: portion; }
+  .a-item > .a-cell:nth-child(3) { grid-area: cal; }
+  .a-item > .a-cell:nth-child(4) { grid-area: prot; }
+  .a-item > .a-cell:nth-child(5) { grid-area: carb; }
+  .a-item > .a-cell:nth-child(6) { grid-area: fat; }
+  .a-item > .a-item__remove { grid-area: remove; align-self: end; }
+  .a-cell__label {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 0 2px;
+    overflow: visible;
+    clip: auto;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .a-cell--name input { font-size: 20px; }
+  .a-totals {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "label label label label label label"
+      "cal cal prot prot carb carb"
+      "fat fat . . . .";
+    gap: 10px 12px;
+    padding-top: 18px;
+  }
+  .a-totals > *:nth-child(1) { grid-area: label; }
+  .a-totals > *:nth-child(2) { display: none; }
+  .a-totals > *:nth-child(3) { grid-area: cal; }
+  .a-totals > *:nth-child(4) { grid-area: prot; }
+  .a-totals > *:nth-child(5) { grid-area: carb; }
+  .a-totals > *:nth-child(6) { grid-area: fat; }
+  .a-totals > *:nth-child(7) { display: none; }
+  .a-totals strong { text-align: left; }
+  .a-totals strong::before {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .a-totals > strong:nth-child(3)::before { content: "kcal"; }
+  .a-totals > strong:nth-child(4)::before { content: "protein"; }
+  .a-totals > strong:nth-child(5)::before { content: "carbs"; }
+  .a-totals > strong:nth-child(6)::before { content: "fat"; }
+  .a-result { padding: 24px 22px; }
+  .a-result__head { gap: 14px; }
+  .a-result__title { font-size: 26px; }
+  .a-compose__meta .field--date { flex: 1 1 100%; }
+  .a-compose { padding: 24px 22px; }
+  .a-alch__panel { padding: 24px 22px; }
+  .a-row { grid-template-columns: 80px minmax(0, 1fr) auto auto; gap: 12px; }
+  .a-row--plain { grid-template-columns: 80px minmax(0, 1fr) auto; }
+  .a-row__tools { min-width: 0; flex-direction: column; gap: 5px; align-items: flex-end; }
+  .a-row__name { font-size: 18px; }
+}
+
+@media (max-width: 540px) {
+  .a-page { padding: 0 18px 52px; }
+  .a-header { padding-top: 18px; }
+  .a-header__meta span:first-child { display: none; }
+  .a-header__meta { justify-content: flex-start; }
+  .a-masthead { gap: 12px; padding: 0; }
+  .a-masthead__rule { display: none; }
+  .a-masthead__title { font-size: clamp(28px, 7vw, 36px); }
+  .a-tagline { font-size: 12.5px; margin-bottom: 18px; }
+  .a-nav { justify-content: flex-start; flex-wrap: wrap; overflow: visible; margin-bottom: 26px; padding: 0; gap: 0; }
+  .a-nav__item { padding: 10px 9px; white-space: nowrap; font-size: 9px; }
+  .a-display { font-size: clamp(32px, 9vw, 44px); }
+  .a-progress__num { flex-wrap: wrap; gap: 4px 10px; }
+  .a-progress__num strong { font-size: 58px; }
+  .a-lead__plate .macro-plate { min-height: 300px; }
+  .macro-plate__ring { width: min(68%, 240px); }
+  .a-target { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+  .a-target .btn-line { width: 100%; }
+  .a-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .a-day__date strong { font-size: 36px; }
+  .a-day__total { font-size: 8px; }
+  .a-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+  .a-row__meal { grid-column: 1; }
+  .a-row__cal { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .a-row .a-row__tools { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-start; }
+  .a-row__main { grid-column: 1; }
+  .a-row--plain { grid-template-columns: minmax(0, 1fr) auto; }
+  .a-form { padding: 22px 20px; }
+  .a-form__foot .btn-ink, .a-form__foot .btn-line { flex: 1 1 auto; }
+  .a-compose { padding: 22px 20px; }
+  .a-compose__foot { align-items: stretch; }
+  .a-compose__actions { width: 100%; justify-content: space-between; gap: 10px; }
+  .a-compose__actions .btn-ink { flex: 1 1 auto; }
+  .a-result { padding: 22px 20px; }
+  .a-result__title { font-size: 24px; }
+  .a-compose__meta { gap: 18px; }
+  .a-compose__meta > .field:first-child, .a-compose__meta .field--date { flex: 1 1 100%; }
+  .a-result__foot { align-items: stretch; }
+  .a-result__actions { flex-wrap: wrap; justify-content: flex-end; }
+  .a-result__foot .btn-ink { width: 100%; }
+  .a-goal__figure { margin-top: 30px; flex-wrap: wrap; }
+  .a-goal__editor { padding: 22px 20px; }
+  .a-alch__panel { padding: 22px 20px; }
+  .a-alch__actions .btn-ink { width: 100%; }
+  .suggest-help { left: auto; right: 0; width: min(250px, calc(100vw - 36px)); transform: translate(0, -3px); }
+  .suggest-info-wrap:hover .suggest-help, .suggest-info-wrap:focus-within .suggest-help { transform: translate(0, 0); }
+  .toast { left: 14px; right: 14px; bottom: 16px; max-width: none; text-align: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}

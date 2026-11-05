@@ -1,0 +1,69 @@
+/* Journal */
+.a-journal { animation: fade .35s ease both; }
+.a-journal__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line-2);
+}
+.a-search { position: relative; width: min(100%, 320px); padding-bottom: 2px; }
+.a-search input {
+  width: 100%;
+  padding: 10px 2px 9px 24px;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+.a-search input:focus { border-bottom-color: var(--ink); }
+.a-search__icon { position: absolute; left: 2px; bottom: 12px; color: var(--muted); font-size: 15px; line-height: 1; }
+.a-day { padding: 26px 0 6px; border-bottom: 1px solid var(--line-2); }
+.a-day__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 5px; }
+.a-day__date { display: flex; align-items: baseline; gap: 12px; }
+.a-day__date strong { color: var(--ink); font-family: var(--serif); font-size: 44px; font-weight: 500; letter-spacing: -.05em; line-height: .8; }
+.a-day__date span { color: var(--muted); font-family: var(--sans); font-size: 8.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.a-day__total { color: var(--muted); font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.a-empty-state { display: none; flex-direction: column; align-items: flex-start; gap: 10px; padding: 38px 0; border-bottom: 1px solid var(--line); }
+.a-empty-state.is-visible { display: flex; }
+.a-empty-state p { margin: 0; color: var(--muted); font-family: var(--serif); font-size: 17px; font-style: italic; }
+.a-empty-state .btn-line { margin-top: 4px; }
+
+/* Goal */
+.a-goal { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 64px; align-items: start; padding-top: 6px; }
+.a-goal__figure { display: flex; align-items: baseline; gap: 14px; margin-top: 44px; }
+.a-goal__figure strong { color: var(--ink); font-family: var(--serif); font-size: clamp(64px, 9vw, 112px); font-weight: 500; letter-spacing: -.06em; line-height: .8; font-variant-numeric: tabular-nums; }
+.a-goal__figure span { color: var(--muted); font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.a-goal__bar { max-width: 520px; margin-top: 28px; }
+.a-goal__editor { padding: 28px 30px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--cream); box-shadow: var(--shadow-card); }
+.a-goal__editor .btn-ink { width: 100%; margin-top: 22px; }
+.a-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.a-presets button {
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.a-presets button:hover { border-color: var(--line-2); color: var(--ink); background: var(--paper); }
+.a-editor-note { min-height: 16px; margin: 16px 0 0; color: var(--faint); font-family: var(--sans); font-size: 9.5px; line-height: 1.6; }
+
+/* Create a meal */
+.a-alch { animation: fade .35s ease both; }
+.a-alch__grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 56px; align-items: start; }
+#panel-alchemist .a-section__head { border-bottom: 0; }
+.a-alch__panel { padding: 26px 28px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--cream); box-shadow: var(--shadow-card); }
+.a-alch__panel .field + .field { margin-top: 20px; }
+.a-alch__panel .a-examples + .field { margin-top: 24px; }
+.a-alch__counted-field > span { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.a-alch__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 22px; }
+.a-status { flex: 1; min-width: 140px; color: var(--faint); font-family: var(--sans); font-size: 9px; line-height: 1.5; }
+.a-alch__results { margin-top: 38px; }
+.a-alch__results .a-section__head { margin-bottom: 16px; }
+

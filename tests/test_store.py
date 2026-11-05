@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import store  # noqa: E402 - the repo root has to be importable first
+from app.journal import store  # noqa: E402 - the repo root has to be importable first
 
 
 class StoreTestCase(unittest.TestCase):

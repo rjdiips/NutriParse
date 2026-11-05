@@ -20,7 +20,10 @@ sys.path.insert(0, str(REPO_ROOT))
 try:
     from fastapi.testclient import TestClient
 
-    import server
+    from app.config import MAX_MEAL_ITEMS, MAX_REQUEST_BYTES, RECIPE_COUNT, env_file_mtime
+    from app.journal import store
+    from app.main import app
+    from app.services import nutrition, recipes
 except Exception as error:  # pragma: no cover - only without the API dependencies
     TestClient = None
     SKIP_REASON = f"API dependencies are unavailable: {error}"
@@ -33,22 +36,22 @@ class ApiTestCase(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
 
         self._previous = (
-            server.app.state.store_path,
-            server.app.state.env,
-            server.app.state.env_mtime,
+            app.state.store_path,
+            app.state.env,
+            app.state.env_mtime,
         )
         self.addCleanup(self._restore_state)
 
-        server.app.state.store_path = Path(self._tmp.name) / "data.json"
-        server.app.state.env = {}
+        app.state.store_path = Path(self._tmp.name) / "data.json"
+        app.state.env = {}
         # Pin the mtime so a request does not treat the real .env as a change.
-        server.app.state.env_mtime = server.env_file_mtime()
-        self.client = TestClient(server.app, base_url="http://localhost:8100")
+        app.state.env_mtime = env_file_mtime()
+        self.client = TestClient(app, base_url="http://localhost:8100")
 
     def _restore_state(self):
-        (server.app.state.store_path,
-         server.app.state.env,
-         server.app.state.env_mtime) = self._previous
+        (app.state.store_path,
+         app.state.env,
+         app.state.env_mtime) = self._previous
 
     def entry(self, **overrides):
         row = {
@@ -70,6 +73,11 @@ class ApiTestCase(unittest.TestCase):
 
 
 class TestStaticAllowlist(ApiTestCase):
+    def test_health_reports_ok(self):
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
     def test_public_files_are_served(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -78,6 +86,10 @@ class TestStaticAllowlist(ApiTestCase):
         script = self.client.get("/nutriparse.js")
         self.assertEqual(script.status_code, 200)
         self.assertTrue(script.headers["content-type"].startswith("text/javascript"))
+
+        asset = self.client.get("/assets/js/nutriparse.js")
+        self.assertEqual(asset.status_code, 200)
+        self.assertTrue(asset.headers["content-type"].startswith("text/javascript"))
 
     def test_journal_surface_is_served(self):
         page = self.client.get("/food-journal.html")
@@ -92,8 +104,12 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertEqual(client.status_code, 200)
         self.assertTrue(client.headers["content-type"].startswith("text/javascript"))
 
+        page_asset = self.client.get("/assets/js/food-journal.js")
+        self.assertEqual(page_asset.status_code, 200)
+        self.assertTrue(page_asset.headers["content-type"].startswith("text/javascript"))
+
     def test_private_files_are_not_reachable(self):
-        for path in ("/server.py", "/.env", "/store.py", "/data.json"):
+        for path in ("/server.py", "/.env", "/store.py", "/data.json", "/app/main.py"):
             with self.subTest(path=path):
                 self.assert_error(self.client.get(path), 404, "Not Found")
 
@@ -200,7 +216,7 @@ class TestJournal(ApiTestCase):
             headers={"Origin": "https://evil.example"},
         )
         self.assert_error(response, 403, "Journal writes must come from the NutriParse app")
-        self.assertFalse(Path(server.app.state.store_path).exists())
+        self.assertFalse(Path(app.state.store_path).exists())
 
     def test_invalid_entries_are_rejected_by_the_store(self):
         response = self.client.post(
@@ -215,7 +231,7 @@ class TestJournal(ApiTestCase):
         self.assert_error(response, 404, "That entry is no longer in the journal.")
 
     def test_corrupt_store_is_500(self):
-        Path(server.app.state.store_path).write_text("{ not json", encoding="utf-8")
+        Path(app.state.store_path).write_text("{ not json", encoding="utf-8")
         response = self.client.get("/api/journal")
         self.assertEqual(response.status_code, 500)
         self.assertIn("could not be read", response.json()["error"])
@@ -241,7 +257,7 @@ class TestRequestBodies(ApiTestCase):
         self.assert_error(response, 400, "JSON body must be an object")
 
     def test_oversized_body_is_413(self):
-        body = b'{"text":"' + b"a" * server.MAX_REQUEST_BYTES + b'"}'
+        body = b'{"text":"' + b"a" * MAX_REQUEST_BYTES + b'"}'
         response = self.client.post(
             "/api/parse", content=body, headers={"Content-Type": "application/json"}
         )
@@ -265,8 +281,8 @@ class TestAiAndImages(ApiTestCase):
         self.assert_error(response, 502, "OPENROUTER_API_KEY is not configured")
 
     def test_disabled_image_generation_is_503(self):
-        server.app.state.env = {"LOCAL_IMAGE_GENERATION_ENABLED": "false"}
-        server.app.state.env_mtime = server.env_file_mtime()
+        app.state.env = {"LOCAL_IMAGE_GENERATION_ENABLED": "false"}
+        app.state.env_mtime = env_file_mtime()
         response = self.client.post(
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl of dal"}
         )
@@ -290,7 +306,7 @@ def complete_recipe(steps=5, **overrides):
 
 def complete_answer(recipe=None):
     recipe = complete_recipe() if recipe is None else recipe
-    return {"recipes": [recipe for _ in range(server.RECIPE_COUNT)]}
+    return {"recipes": [recipe for _ in range(RECIPE_COUNT)]}
 
 
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
@@ -301,38 +317,38 @@ class TestRecipeRules(unittest.TestCase):
         return complete_recipe(steps, **overrides)
 
     def test_a_complete_answer_has_no_shortcomings(self):
-        self.assertIsNone(server._recipe_shortcomings(complete_answer()))
+        self.assertIsNone(recipes.recipe_shortcomings(complete_answer()))
 
     def test_the_wrong_number_of_recipes_is_a_shortcoming(self):
         for count in (0, 1, 2, 4):
             with self.subTest(count=count):
-                problem = server._recipe_shortcomings(
+                problem = recipes.recipe_shortcomings(
                     {"recipes": [self.recipe() for _ in range(count)]}
                 )
                 self.assertIn(f"{count} recipes", problem)
 
     def test_collapsed_steps_are_a_shortcoming(self):
-        recipes = [self.recipe() for _ in range(2)] + [self.recipe(steps=2)]
-        self.assertIn("usable steps", server._recipe_shortcomings({"recipes": recipes}))
+        rows = [self.recipe() for _ in range(2)] + [self.recipe(steps=2)]
+        self.assertIn("usable steps", recipes.recipe_shortcomings({"recipes": rows}))
 
     def test_missing_pieces_are_shortcomings(self):
-        self.assertIn("no recipe list", server._recipe_shortcomings({"recipes": "three"}))
-        self.assertIn("no recipe list", server._recipe_shortcomings(None))
-        self.assertIn("not an object", server._recipe_shortcomings({"recipes": ["Dal", "Rice", "Roti"]}))
+        self.assertIn("no recipe list", recipes.recipe_shortcomings({"recipes": "three"}))
+        self.assertIn("no recipe list", recipes.recipe_shortcomings(None))
+        self.assertIn("not an object", recipes.recipe_shortcomings({"recipes": ["Dal", "Rice", "Roti"]}))
         no_steps = {"title": "Dal", "description": "A bowl"}
-        self.assertIn("no steps", server._recipe_shortcomings({"recipes": [no_steps, self.recipe(), self.recipe()]}))
+        self.assertIn("no steps", recipes.recipe_shortcomings({"recipes": [no_steps, self.recipe(), self.recipe()]}))
 
     def test_missing_title_description_or_nutrition_is_a_shortcoming(self):
         for field, message in (("title", "no title"), ("description", "no description"),
                                ("nutrition", "no nutrition")):
             with self.subTest(field=field):
                 broken = self.recipe(**{field: "" if field != "nutrition" else None})
-                self.assertIn(message, server._recipe_shortcomings(
+                self.assertIn(message, recipes.recipe_shortcomings(
                     {"recipes": [broken, self.recipe(), self.recipe()]}
                 ))
 
     def test_the_prompt_asks_for_three_sound_recipes(self):
-        prompt = server._recipe_prompt(["dal", "rice"], "spinach")
+        prompt = recipes.recipe_prompt(["dal", "rice"], "spinach")
         self.assertIn("exactly three", prompt)
         self.assertIn("number of servings", prompt)
         self.assertNotIn("instructions. servings", prompt)
@@ -343,34 +359,34 @@ class TestRecipeRepair(unittest.TestCase):
     """A malformed answer earns one repair attempt, then the request fails."""
 
     def setUp(self):
-        self._original = server._request_ai
-        self.addCleanup(setattr, server, "_request_ai", self._original)
+        self._original = recipes.request_ai
+        self.addCleanup(setattr, recipes, "request_ai", self._original)
         self.prompts = []
 
     def answers(self, *replies):
         def request(prompt, env, system_prompt, **kwargs):
             self.prompts.append(prompt)
             return replies[len(self.prompts) - 1]
-        server._request_ai = request
+        recipes.request_ai = request
 
     def test_a_sound_first_answer_is_not_repaired(self):
         self.answers(complete_answer())
-        result = server.suggest_recipes(["dal"], "", {})
+        result = recipes.suggest_recipes(["dal"], "", {})
         self.assertEqual(len(self.prompts), 1)
-        self.assertEqual(len(result["recipes"]), server.RECIPE_COUNT)
+        self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
 
     def test_a_bad_first_answer_is_repaired_once(self):
         self.answers(complete_answer(complete_recipe(steps=2)), complete_answer())
-        result = server.suggest_recipes(["dal"], "", {})
+        result = recipes.suggest_recipes(["dal"], "", {})
         self.assertEqual(len(self.prompts), 2)
         self.assertIn("rejected", self.prompts[1])
-        self.assertEqual(len(result["recipes"]), server.RECIPE_COUNT)
+        self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
 
     def test_a_bad_second_answer_fails_closed(self):
         self.answers(complete_answer(complete_recipe(steps=2)),
                      complete_answer(complete_recipe(steps=2)))
         with self.assertRaisesRegex(RuntimeError, "complete recipes"):
-            server.suggest_recipes(["dal"], "", {})
+            recipes.suggest_recipes(["dal"], "", {})
         self.assertEqual(len(self.prompts), 2)
 
 
@@ -379,33 +395,33 @@ class TestMealItemRules(unittest.TestCase):
     """Model output is trimmed to what the store will accept."""
 
     def test_long_names_and_portions_are_cut_to_store_limits(self):
-        items = server._meal_items_from({"items": [{
+        items = nutrition.meal_items_from({"items": [{
             "name": "n" * 300,
             "portion": "p" * 300,
             "calories": 100, "protein": 1, "carbs": 2, "fat": 3,
         }]})
-        self.assertEqual(len(items[0]["name"]), server.store.MAX_NAME_LENGTH)
-        self.assertEqual(len(items[0]["portion"]), server.store.MAX_PORTION_LENGTH)
+        self.assertEqual(len(items[0]["name"]), store.MAX_NAME_LENGTH)
+        self.assertEqual(len(items[0]["portion"]), store.MAX_PORTION_LENGTH)
         # What the parser emits must pass the store's own validation.
-        server.store.normalize_entry({**items[0], "meal": "lunch", "date": "2026-10-26"})
+        store.normalize_entry({**items[0], "meal": "lunch", "date": "2026-10-26"})
 
     def test_a_missing_portion_is_empty(self):
-        items = server._meal_items_from({"items": [{
+        items = nutrition.meal_items_from({"items": [{
             "name": "Dal", "calories": 150, "protein": 9, "carbs": 20, "fat": 4,
         }]})
         self.assertEqual(items[0]["portion"], "")
 
     def test_a_non_string_portion_is_ignored(self):
-        items = server._meal_items_from({"items": [{
+        items = nutrition.meal_items_from({"items": [{
             "name": "Dal", "portion": 2, "calories": 150, "protein": 9, "carbs": 20, "fat": 4,
         }]})
         self.assertEqual(items[0]["portion"], "")
 
     def test_empty_and_oversized_answers_are_rejected(self):
         with self.assertRaisesRegex(RuntimeError, "did not find any food"):
-            server._meal_items_from({"items": []})
+            nutrition.meal_items_from({"items": []})
         with self.assertRaisesRegex(RuntimeError, "too many"):
-            server._meal_items_from({"items": [{"name": "Dal"}] * (server.MAX_MEAL_ITEMS + 1)})
+            nutrition.meal_items_from({"items": [{"name": "Dal"}] * (MAX_MEAL_ITEMS + 1)})
 
 
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
@@ -413,14 +429,14 @@ class TestNutritionSuggest(unittest.TestCase):
     """A single-item estimate has to fit the store just like a parsed meal."""
 
     def test_a_long_suggested_name_is_cut_to_the_store_limit(self):
-        original = server._chat_completion
-        self.addCleanup(setattr, server, "_chat_completion", original)
-        server._chat_completion = lambda *args, **kwargs: {
+        original = nutrition.chat_completion
+        self.addCleanup(setattr, nutrition, "chat_completion", original)
+        nutrition.chat_completion = lambda *args, **kwargs: {
             "name": "n" * 300, "calories": 100, "protein": 1, "carbs": 2, "fat": 3,
         }
-        result = server.suggest_nutrition("Dal", "1 bowl", {})
-        self.assertEqual(len(result["name"]), server.store.MAX_NAME_LENGTH)
-        server.store.normalize_entry({**result, "meal": "lunch", "date": "2026-10-26"})
+        result = nutrition.suggest_nutrition("Dal", "1 bowl", {})
+        self.assertEqual(len(result["name"]), store.MAX_NAME_LENGTH)
+        store.normalize_entry({**result, "meal": "lunch", "date": "2026-10-26"})
 
 
 if __name__ == "__main__":

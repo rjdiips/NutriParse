@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Food Journal — Today</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@400..800&display=swap" rel="stylesheet" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="stylesheet" href="/assets/css/food-journal/base.css" />
+<link rel="stylesheet" href="/assets/css/food-journal/layout.css" />
+<link rel="stylesheet" href="/assets/css/food-journal/compose.css" />
+<link rel="stylesheet" href="/assets/css/food-journal/journal.css" />
+<link rel="stylesheet" href="/assets/css/food-journal/responsive.css" />
+</head>
+<body>
+<div class="a-page">
+  <header class="a-header">
+    <div class="a-header__meta"><span>Vol. I &mdash; A daily record</span><span id="headerDate"></span></div>
+    <div class="a-masthead"><span class="a-masthead__rule"></span><div class="a-masthead__title">The Food Journal</div><span class="a-masthead__rule"></span></div>
+    <p class="a-tagline">A daily record of what nourishes you &mdash; kept gently, read often.</p>
+  </header>
+
+  <nav class="a-nav" role="tablist" aria-label="Sections">
+    <button id="tab-summary" class="tab a-nav__item active" role="tab" aria-selected="true" aria-controls="panel-summary" data-tab="summary"><span class="a-nav__num">01</span>Today</button>
+    <button id="tab-add" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-add" data-tab="add"><span class="a-nav__num">02</span>Log a meal</button>
+    <button id="tab-alchemist" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-alchemist" data-tab="alchemist"><span class="a-nav__num">03</span>Create a meal</button>
+    <button id="tab-entries" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-entries" data-tab="entries"><span class="a-nav__num">04</span>History</button>
+    <button id="tab-goal" class="tab a-nav__item" role="tab" aria-selected="false" aria-controls="panel-goal" data-tab="goal"><span class="a-nav__num">05</span>Goal</button>
+  </nav>
+
+  <main class="a-main">
+    <div id="panel-summary" class="section active" role="tabpanel" aria-labelledby="tab-summary">
+      <section class="a-lead">
+        <div class="a-lead__copy">
+          <span class="kicker">Today &middot; <span id="summaryDate"></span></span>
+          <h1 class="a-display">A day of<br /><em>small</em> decisions.</h1>
+          <p class="a-deck" id="todayDeck">Nothing logged yet. The page is open.</p>
+          <div class="a-progress">
+            <div class="a-progress__num"><strong id="todayCalories">0</strong><span>of <span id="todayGoal">2,000</span> calories</span></div>
+            <div class="a-progress__bar" role="progressbar" aria-label="Today's calorie goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="todayProgressBar" style="width:0%"></i></div>
+            <div class="a-progress__meta"><span id="todayPct">0% of daily target</span><span id="todayRemaining">2,000 left</span></div>
+          </div>
+          <p class="a-start-here">Start here: <button type="button" data-tab="add">log what you ate</button>, or <button type="button" data-tab="alchemist">create a meal</button> to save a recipe.</p>
+        </div>
+        <div class="a-lead__plate">
+          <div class="macro-plate" id="macroPlate" role="img" aria-label="Today's macro split">
+            <div class="macro-plate__ring is-empty" id="macroPlateRing">
+              <div class="macro-plate__center">
+                <strong id="macroPlateCalories">0</strong>
+                <span>kcal today</span>
+              </div>
+            </div>
+            <span class="macro-plate__tag">The day, plated</span>
+          </div>
+          <div class="a-facts">
+            <div class="a-fact a-fact--protein"><span>Protein</span><strong><span id="todayProtein">0</span><small>g</small></strong></div>
+            <div class="a-fact a-fact--carbs"><span>Carbs</span><strong><span id="todayCarbs">0</span><small>g</small></strong></div>
+            <div class="a-fact a-fact--fat"><span>Fat</span><strong><span id="todayFat">0</span><small>g</small></strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="a-section">
+        <div class="a-section__head"><span class="kicker">The day&rsquo;s menu</span><span class="a-section__note" id="todayMenuNote">0 entries &middot; 0 kcal</span></div>
+        <div id="todayMenu"></div>
+      </section>
+
+      <section class="a-target">
+        <div><span class="kicker">The daily target</span>
+          <div class="a-target__line"><strong id="todayTarget">2,000</strong><span id="todayTargetNote">calories &middot; 0% used</span></div>
+        </div>
+        <button type="button" class="btn-line" data-tab="goal">Adjust the target &rarr;</button>
+      </section>
+    </div>
+
+    <div id="panel-add" class="section" role="tabpanel" aria-labelledby="tab-add">
+      <section class="a-log">
+        <div class="a-log__intro">
+          <span class="kicker">Add to the record</span>
+          <h1 class="a-display">What did<br /><em>you</em> eat?</h1>
+          <p class="a-deck">Write it plainly, the way you&rsquo;d tell a friend. The model splits your words into foods, and every number stays editable before it reaches the record.</p>
+          <div class="a-editorial-note"><span class="kicker">A note</span>
+            <p>Log the thing you actually ate, not the thing you meant to. The record is more useful that way.</p>
+          </div>
+        </div>
+
+        <div class="a-compose">
+          <label class="field a-compose__field" for="mealText"><span>Describe the plate <small class="a-compose__count"><span id="mealCount">0</span>/500</small></span><textarea id="mealText" rows="3" maxlength="500" placeholder="e.g. 2 rotis, dal, and a glass of lassi"></textarea></label>
+          <div class="a-examples" aria-label="Example descriptions">
+            <span class="kicker">Try</span>
+            <button type="button" class="a-example" data-example="2 rotis, dal, and a glass of lassi">2 rotis, dal, lassi</button>
+            <button type="button" class="a-example" data-example="leftover rice with 2 eggs and half a bell pepper">rice, eggs, pepper</button>
+            <button type="button" class="a-example" data-example="chicken shawarma roll and a coke">shawarma roll</button>
+          </div>
+          <div class="a-compose__meta">
+            <div class="field">
+              <span>Meal</span>
+              <div class="a-meals" role="group" aria-label="Meal">
+                <button type="button" class="meal-chip active" aria-pressed="true" data-meal="breakfast" title="Breakfast"><span class="meal-emoji" aria-hidden="true">🍳</span><span>Breakfast</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="lunch" title="Lunch"><span class="meal-emoji" aria-hidden="true">🥗</span><span>Lunch</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="dinner" title="Dinner"><span class="meal-emoji" aria-hidden="true">🍽️</span><span>Dinner</span></button>
+                <button type="button" class="meal-chip" aria-pressed="false" data-meal="snack" title="Snack"><span class="meal-emoji" aria-hidden="true">🍎</span><span>Snack</span></button>
+              </div>
+            </div>
+            <label class="field field--date" for="date"><span>Date</span><input id="date" type="date" /></label>
+          </div>
+          <div class="a-compose__foot">
+            <div class="a-compose__actions">
+              <button type="button" id="parseBtn" class="btn-ink">Estimate nutrition</button>
+            </div>
+          </div>
+          <p class="a-parse-error" id="parseError" role="alert" hidden></p>
+        </div>
+
+        <section id="parseResult" class="a-result" aria-labelledby="resultTitle" hidden>
+          <div class="a-result__head">
+            <div>
+              <span class="kicker" id="resultKicker">The plate</span>
+              <h2 class="a-result__title" id="resultTitle" tabindex="-1">The plate, itemised.</h2>
+              <p class="a-result__sub" id="resultSub"></p>
+            </div>
+            <button type="button" id="clearParsedBtn" class="text-btn">Discard</button>
+          </div>
+
+          <div class="a-grid a-grid--head" aria-hidden="true">
+            <span>Item</span><span>Portion</span><span class="num">Calories</span><span class="num">Protein (g)</span><span class="num">Carbs (g)</span><span class="num">Fat (g)</span><span></span>
+          </div>
+          <div id="parsedRows" class="a-parsed-rows"></div>
+          <div class="a-grid a-totals">
+            <span class="a-totals__label">Total<small id="totalsNote"></small></span>
+            <span aria-hidden="true"></span>
+            <strong class="num" id="totalCalories">0</strong>
+            <strong class="num" id="totalProtein">0</strong>
+            <strong class="num" id="totalCarbs">0</strong>
+            <strong class="num" id="totalFat">0</strong>
+            <span aria-hidden="true"></span>
+          </div>
+          <div class="a-macrobar" id="parsedMacrobar" aria-hidden="true">
+            <span data-macro="p"></span><span data-macro="c"></span><span data-macro="f"></span>
+          </div>
+          <p class="a-result__meta" id="macroLegend"></p>
+
+          <div class="a-result__foot">
+            <span class="a-result__hint">Estimates, not measurements. Edit anything.</span>
+            <div class="a-result__actions">
+              <button type="button" id="manualRowBtn" class="text-btn">Add a row by hand</button>
+              <button type="button" id="saveParsedBtn" class="btn-ink">Save to the record</button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div id="panel-entries" class="section" role="tabpanel" aria-labelledby="tab-entries">
+      <section class="a-journal">
+        <div class="a-journal__head">
+          <div><span class="kicker">The archive</span><h1 class="a-display">Everything,<br /><em>in order.</em></h1></div>
+          <div class="a-search"><span class="a-search__icon" aria-hidden="true">&#9906;</span>
+            <input id="entriesSearch" type="search" placeholder="Search the record..." aria-label="Search entries" />
+          </div>
+        </div>
+        <div id="entryBody" class="a-days"></div>
+        <div id="emptyState" class="a-empty-state">
+          <span class="kicker">No entries yet</span>
+          <p>Log your first meal to begin the record.</p>
+          <button type="button" class="btn-line" data-tab="add">Log a meal &rarr;</button>
+        </div>
+        <p id="noResults" class="a-empty" hidden>No entries match that search.</p>
+      </section>
+    </div>
+
+    <div id="panel-goal" class="section" role="tabpanel" aria-labelledby="tab-goal">
+      <section class="a-goal">
+        <div class="a-goal__main">
+          <span class="kicker">The daily allowance</span>
+          <h1 class="a-display">A target,<br /><em>not a verdict.</em></h1>
+          <p class="a-deck">A steady number to steer by. Adjust it when your days change; the record will follow.</p>
+          <div class="a-goal__figure"><strong id="goalFigure">2,000</strong><span>calories a day</span></div>
+          <div class="a-progress__bar a-goal__bar" role="progressbar" aria-label="Today's calorie goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="goalProgressBar" style="width:0%"></i></div>
+          <div class="a-progress__meta"><span id="goalTodayCalories">0 eaten today</span><span id="goalRemaining">2,000 remaining</span></div>
+        </div>
+        <aside class="a-goal__editor">
+          <span class="kicker">Adjust the target</span>
+          <label class="field" for="goalInput" style="margin-top:18px"><span>Daily calorie goal</span><input id="goalInput" type="number" min="1" /></label>
+          <div class="a-presets">
+            <button type="button" data-goal-preset="1800">1,800</button>
+            <button type="button" data-goal-preset="2000">2,000</button>
+            <button type="button" data-goal-preset="2200">2,200</button>
+          </div>
+          <button id="saveGoal" class="btn-ink" type="button">Save the target</button>
+          <p class="a-editor-note" id="goalStatus" aria-live="polite"></p>
+        </aside>
+      </section>
+    </div>
+
+    <div id="panel-alchemist" class="section" role="tabpanel" aria-labelledby="tab-alchemist">
+      <section class="a-alch">
+        <div class="a-alch__grid">
+          <div>
+            <span class="kicker">The fridge is a laboratory</span>
+            <h1 class="a-display">Tell us what&rsquo;s<br /><em>in your fridge.</em></h1>
+            <p class="a-deck">Name your ingredients. I&rsquo;ll turn them into something less mysterious than &ldquo;bits in a bowl.&rdquo;</p>
+            <div class="a-editorial-note"><span class="kicker">A note</span>
+              <p>Start with what you have. The ideas are suggestions; make them your own.</p>
+            </div>
+          </div>
+          <div class="a-alch__panel">
+            <label class="field a-alch__counted-field" for="alchemistIngredients"><span>What have you got? <small class="a-compose__count"><span id="alchemistIngredientsCount">0</span>/500</small></span><textarea id="alchemistIngredients" maxlength="500" placeholder="e.g. cooked rice, eggs, half a bell pepper, spinach"></textarea></label>
+            <div class="a-examples" aria-label="Ingredient examples">
+              <span class="kicker">Try</span>
+              <button type="button" class="a-example" data-ingredients="cooked rice, eggs, half a bell pepper, spinach">rice, eggs, pepper</button>
+              <button type="button" class="a-example" data-ingredients="chickpeas, tomatoes, cucumber, red onion, lemon">chickpeas, tomato, cucumber</button>
+              <button type="button" class="a-example" data-ingredients="oats, banana, peanut butter, milk">oats, banana, peanut butter</button>
+            </div>
+            <label class="field" for="alchemistUseSoon"><span>Anything to use soon? <i>(optional)</i></span><input id="alchemistUseSoon" maxlength="500" placeholder="e.g. spinach is looking dramatic" /></label>
+            <div class="a-alch__actions">
+              <button id="conjureBtn" class="btn-ink" type="button">Create a meal</button>
+              <span id="alchemistStatus" class="a-status" role="status" aria-live="polite">Name a few ingredients to get started.</span>
+            </div>
+          </div>
+        </div>
+        <div class="a-alch__results">
+          <div id="recipeResults" class="recipe-grid" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="a-footer"><p>&ldquo;The record is not the meal.&rdquo;</p><span>The Food Journal &middot; Meals, noted</span></footer>
+</div>
+
+<div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+
+<script src="/assets/js/journal-client.js"></script>
+<script src="/assets/js/food-journal.js"></script>
+</body>
+</html>

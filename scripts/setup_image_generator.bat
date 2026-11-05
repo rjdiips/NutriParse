@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 set "RELEASE=master-982-0518b34"
 set "SD_ZIP=sd-master-0518b34-bin-win-cuda12-x64.zip"
@@ -37,7 +37,7 @@ curl.exe -L --fail --retry 3 -C - -o "%MODEL%" "%MODEL_URL%"
 if errorlevel 1 goto failed
 
 :done
-echo Setup complete. Run start_image_generator.bat before using the Leftover Alchemist.
+echo Setup complete. Run scripts\start_image_generator.bat before using the Leftover Alchemist.
 pause
 exit /b 0
 

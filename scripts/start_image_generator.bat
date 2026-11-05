@@ -1,9 +1,9 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 if not exist ".image-tools" (
-  echo Run setup_image_generator.bat first.
+  echo Run scripts\setup_image_generator.bat first.
   pause
   exit /b 1
 )
@@ -14,12 +14,12 @@ if not defined SD_SERVER for /f "delims=" %%f in ('dir /s /b ".image-tools\sd-se
 set "MODEL=models\sdxl-turbo\sd_xl_turbo_1.0_fp16.safetensors"
 
 if not defined SD_SERVER (
-  echo Run setup_image_generator.bat first.
+  echo Run scripts\setup_image_generator.bat first.
   pause
   exit /b 1
 )
 if not exist "%MODEL%" (
-  echo Run setup_image_generator.bat first.
+  echo Run scripts\setup_image_generator.bat first.
   pause
   exit /b 1
 )

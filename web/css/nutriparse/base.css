@@ -1,0 +1,158 @@
+/* NutriParse — compose surface
+   Restrained, data-dense direction: neutral surface, one accent, mono numerals. */
+
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #15171c;
+  --ink-2: #414750;
+  --muted: #767d89;
+  --line: #e5e7ec;
+  --line-strong: #d2d7df;
+  --accent: #0f6558;
+  --accent-hover: #0b5247;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f1ee;
+  --danger: #a1321f;
+  --danger-soft: #fcf0ed;
+  --danger-line: #f0cdc5;
+  --p: #2b5f9e;
+  --c: #a2721c;
+  --f: #8c3a6b;
+  --radius: 10px;
+  --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* Component display rules below would otherwise beat the UA [hidden] rule. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar__brand { display: flex; align-items: center; gap: 10px; }
+
+.mark {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: var(--ink);
+  position: relative;
+  flex: none;
+}
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: 5px 5px auto 5px;
+  height: 2px;
+  background: var(--accent-soft);
+  box-shadow: 0 4px 0 var(--accent-soft);
+}
+
+.brand {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-size: 15.5px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Segmented control, shared by the top-bar view switch and the composer mode switch. */
+
+.topbar__nav,
+.modes {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: #eef0f3;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.viewtab,
+.mode {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 560;
+  padding: 5px 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.viewtab:hover,
+.mode:hover { color: var(--ink); }
+
+.viewtab.is-active,
+.mode.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(20, 24, 32, 0.1);
+}
+
+.viewtab:focus-visible,
+.mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.viewtab[disabled],
+.mode[disabled] { opacity: 0.5; cursor: default; }
+
+/* ---------- page ---------- */
+
+.page {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
