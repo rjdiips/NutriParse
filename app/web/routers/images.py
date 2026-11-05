@@ -42,8 +42,8 @@ def recipe_image(request: Request, payload: JSONBody):
         )
         raise HTTPException(503, "Local image generation is unavailable")
     recipe = {"title": title.strip(), "description": description.strip()}
-    width = image_int(env, "LOCAL_IMAGE_WIDTH", 512, 64, 2048)
-    height = image_int(env, "LOCAL_IMAGE_HEIGHT", 512, 64, 2048)
+    width = image_int(env, "LOCAL_IMAGE_WIDTH", 640, 64, 2048)
+    height = image_int(env, "LOCAL_IMAGE_HEIGHT", 480, 64, 2048)
     steps = image_int(env, "LOCAL_IMAGE_STEPS", 20, 1, 100)
     IMAGE_LOGGER.info(
         "event=image_generation_started request_id=%s width=%d height=%d steps=%d",

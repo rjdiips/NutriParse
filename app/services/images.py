@@ -26,8 +26,8 @@ def generate_local_recipe_image(recipe, endpoint, env):
     body = json.dumps({
         "prompt": prompt,
         "steps": image_int(env, "LOCAL_IMAGE_STEPS", 20, 1, 100),
-        "width": image_int(env, "LOCAL_IMAGE_WIDTH", 512, 64, 2048),
-        "height": image_int(env, "LOCAL_IMAGE_HEIGHT", 512, 64, 2048),
+        "width": image_int(env, "LOCAL_IMAGE_WIDTH", 640, 64, 2048),
+        "height": image_int(env, "LOCAL_IMAGE_HEIGHT", 480, 64, 2048),
     }).encode("utf-8")
     request = urllib.request.Request(endpoint, data=body,
                                      headers={"Content-Type": "application/json"}, method="POST")
