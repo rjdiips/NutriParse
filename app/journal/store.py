@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""The journal store: one JSON document, one set of rules, two front ends.
+"""The journal store: one JSON document and one set of rules.
 
-The CLI (``app.cli``) and the web app's HTTP API (``app.web``) both read and
-write ``data.json`` through this module, so the two surfaces share one store
-instead of keeping separate ones. The server owns the file; the CLI talks to it
-directly because it runs on the same machine as the file.
+The web app's HTTP API (``app.web``) reads and writes ``data.json`` through this
+module, so the Compose view and the Food Journal share one store instead of
+keeping separate ones.
 
 Every write validates the incoming entries, re-reads the document, applies the
 change, and swaps the new file in atomically through os.replace. That means a
@@ -30,8 +29,8 @@ MAX_PORTION_LENGTH = 120
 MEALS = ("breakfast", "lunch", "dinner", "snack")
 
 # One process can serve several requests at once, so read-modify-write cycles
-# are serialised here. A second process on the same file is still possible (the
-# CLI beside an open browser tab); see the README for what that costs.
+# are serialised here. A second process on the same file is still possible
+# (two server processes); see the README for what that costs.
 _LOCK = threading.Lock()
 
 
@@ -228,20 +227,3 @@ def set_goal(path, goal):
         document = load(path)
         document["calorie_goal"] = value
         return _write(path, document)
-
-
-def totals_for_date(entries, target_date):
-    """Sum calories and macros for one YYYY-MM-DD day."""
-    day = [entry for entry in entries if entry.get("date") == target_date]
-    return {
-        "calories": sum(number(entry.get("calories")) for entry in day),
-        "protein": sum(number(entry.get("protein")) for entry in day),
-        "carbs": sum(number(entry.get("carbs")) for entry in day),
-        "fat": sum(number(entry.get("fat")) for entry in day),
-        "count": len(day),
-    }
-
-
-def day_list(entries):
-    """Newest-first list of YYYY-MM-DD days that have entries."""
-    return sorted({entry.get("date") for entry in entries if entry.get("date")}, reverse=True)

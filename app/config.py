@@ -2,7 +2,7 @@
 """Runtime configuration for NutriParse.
 
 Paths, request limits, and the rules for reading ``.env`` live here so the
-server, CLI, and tests all agree on the same values.
+server and tests agree on the same values.
 """
 
 import os

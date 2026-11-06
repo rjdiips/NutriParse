@@ -1,6 +1,6 @@
 const defaultData=()=>({calorie_goal:2000, entries:[]});
 /* The journal lives in the server's data.json (see journal-client.js), shared
-   with the Compose page and the CLI. `data` below is this page's copy of it. */
+   with the Compose page. `data` below is this page's copy of it. */
 let data=defaultData();
 function applyData(doc){
   data={

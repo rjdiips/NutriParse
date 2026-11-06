@@ -447,7 +447,7 @@ def main():
                 status, payload = call_parse(args.base_url, case["text"], args.timeout)
             except (urllib.error.URLError, TimeoutError, OSError) as error:
                 print(f" cannot reach {args.base_url} ({error})")
-                print("\nStart the server first:  python server.py")
+                print("\nStart the server first:  python -m app.main")
                 return 2
             record = score(case, status, payload)
             record["id"] = label

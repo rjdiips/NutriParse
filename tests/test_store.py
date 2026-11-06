@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Tests for the shared journal store.
 
-The store is the one place where the CLI and the web API meet, so its rules are
-worth pinning down: what counts as a valid entry, what happens to a file that
-cannot be parsed, and whether two callers writing at once can lose a row.
+The store is the single source of truth for the journal, so its rules are worth
+pinning down: what counts as a valid entry, what happens to a file that cannot
+be parsed, and whether two callers writing at once can lose a row.
 
 Run them with:  python -m unittest discover -s tests
 """
@@ -311,28 +311,6 @@ class TestConcurrentWrites(StoreTestCase):
         document = store.load(self.path)
         self.assertEqual(len(document["entries"]), 12)
         self.assertEqual(len({row["id"] for row in document["entries"]}), 12)
-
-
-class TestTotals(StoreTestCase):
-    def test_totals_cover_one_day(self):
-        rows = [
-            self.entry(date="2026-10-21", calories=110, protein=3, carbs=22, fat=0.5),
-            self.entry(date="2026-10-21", calories=150, protein=9, carbs=20, fat=4),
-            self.entry(date="2026-10-20", calories=999),
-        ]
-        totals = store.totals_for_date(rows, "2026-10-21")
-        self.assertEqual(totals["calories"], 260)
-        self.assertEqual(totals["protein"], 12)
-        self.assertEqual(totals["count"], 2)
-
-    def test_totals_ignore_junk_values(self):
-        totals = store.totals_for_date([{"date": "2026-10-21", "calories": "many"}], "2026-10-21")
-        self.assertEqual(totals["calories"], 0)
-        self.assertEqual(totals["count"], 1)
-
-    def test_days_are_listed_newest_first(self):
-        rows = [self.entry(date=day) for day in ("2026-10-18", "2026-10-21", "2026-10-18")]
-        self.assertEqual(store.day_list(rows), ["2026-10-21", "2026-10-18"])
 
 
 if __name__ == "__main__":

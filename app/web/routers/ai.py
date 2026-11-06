@@ -1,32 +1,14 @@
-"""Model-backed routes: single-food estimates, meal parsing, and recipes."""
+"""Model-backed routes: meal parsing and recipes."""
 
 from fastapi import APIRouter, HTTPException, Request
 
 from ...config import MAX_TEXT_LENGTH
-from ...services.nutrition import parse_meal, suggest_nutrition
+from ...services.nutrition import parse_meal
 from ...services.recipes import suggest_recipes
 from ..dependencies import JSONBody, current_env, run_ai_feature
 from ..http import json_response
 
 router = APIRouter(prefix="/api", tags=["ai"])
-
-
-@router.post("/suggest")
-def suggest(request: Request, payload: JSONBody):
-    name = payload.get("name")
-    portion = payload.get("portion", "")
-    if not isinstance(name, str) or not name.strip():
-        raise HTTPException(400, "A food name is required")
-    if not isinstance(portion, str):
-        raise HTTPException(400, "Portion must be a string")
-    name, portion = name.strip(), portion.strip()
-    if len(name) > MAX_TEXT_LENGTH or len(portion) > MAX_TEXT_LENGTH:
-        raise HTTPException(400, "Food name and portion must be 500 characters or fewer")
-
-    env = current_env(request)
-    return json_response(
-        run_ai_feature("nutrition", lambda: suggest_nutrition(name, portion, env), env)
-    )
 
 
 @router.post("/parse")

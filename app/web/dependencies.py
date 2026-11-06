@@ -55,7 +55,7 @@ def require_same_origin(request):
     """Refuse a journal write that some other site asked the browser to make."""
     origin = request.headers.get("origin")
     if not origin:
-        # Same-origin requests may omit it, and the CLI never sends one.
+        # Same-origin requests and non-browser clients may omit it.
         return
     port = request.url.port or (443 if request.url.scheme == "https" else 80)
     allowed = {f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}"}

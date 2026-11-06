@@ -1,41 +1,10 @@
-"""Single-food estimation and multi-item meal parsing."""
+"""Multi-item meal parsing."""
 
 import json
 
 from ..config import MAX_MEAL_ITEMS
 from ..journal import store
 from .llm import chat_completion, number_field
-
-
-def suggest_nutrition(name, portion, env):
-    portion_text = portion or "a typical single serving"
-    prompt = (
-        "Estimate nutrition for the food and portion in the JSON data below. Return only a JSON object "
-        'with exactly these keys: "name" (string), "calories", "protein", "carbs", "fat" (nonnegative numbers). '
-        "Calories are kilocalories; macros are grams. If the portion is ambiguous, use one typical serving.\n"
-        + json.dumps({"food": name, "portion": portion_text}, ensure_ascii=False)
-    )
-    result = chat_completion(
-        prompt,
-        "Return one valid JSON object and no prose.",
-        env,
-        temperature=0,
-        default_timeout=30,
-        invalid_json_message="AI did not return valid nutrition data",
-    )
-    if not isinstance(result, dict):
-        raise RuntimeError("AI did not return a nutrition object")
-
-    suggested_name = result.get("name", name)
-    if not isinstance(suggested_name, str) or not suggested_name.strip():
-        suggested_name = name
-    return {
-        "name": suggested_name.strip()[:store.MAX_NAME_LENGTH],
-        "calories": number_field(result, "calories"),
-        "protein": number_field(result, "protein"),
-        "carbs": number_field(result, "carbs"),
-        "fat": number_field(result, "fat"),
-    }
 
 
 def meal_items_from(result):

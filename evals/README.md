@@ -12,7 +12,7 @@ python evals/run_parse_eval.py --repeat 3       # see run-to-run spread
 python evals/run_parse_eval.py --check-fixtures # validate the cases, no network
 ```
 
-The server has to be running (`python server.py`) and the model provider has to
+The server has to be running (`python -m app.main`) and the model provider has to
 be reachable, because this calls the real endpoint. `--check-fixtures` is the
 exception: it only reads the case file, so it works offline and in CI.
 

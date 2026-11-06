@@ -109,7 +109,7 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertTrue(page_asset.headers["content-type"].startswith("text/javascript"))
 
     def test_private_files_are_not_reachable(self):
-        for path in ("/server.py", "/.env", "/store.py", "/data.json", "/app/main.py"):
+        for path in ("/requirements.txt", "/.env", "/store.py", "/data.json", "/app/main.py"):
             with self.subTest(path=path):
                 self.assert_error(self.client.get(path), 404, "Not Found")
 
@@ -267,10 +267,6 @@ class TestRequestBodies(ApiTestCase):
         response = self.client.post("/api/parse", json={"text": "   "})
         self.assert_error(response, 400, "Describe at least one food")
 
-    def test_blank_food_name_is_400(self):
-        response = self.client.post("/api/suggest", json={"name": " ", "portion": ""})
-        self.assert_error(response, 400, "A food name is required")
-
     def test_unknown_route_is_404(self):
         self.assert_error(self.client.get("/api/nope"), 404, "Not Found")
 
@@ -422,21 +418,6 @@ class TestMealItemRules(unittest.TestCase):
             nutrition.meal_items_from({"items": []})
         with self.assertRaisesRegex(RuntimeError, "too many"):
             nutrition.meal_items_from({"items": [{"name": "Dal"}] * (MAX_MEAL_ITEMS + 1)})
-
-
-@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
-class TestNutritionSuggest(unittest.TestCase):
-    """A single-item estimate has to fit the store just like a parsed meal."""
-
-    def test_a_long_suggested_name_is_cut_to_the_store_limit(self):
-        original = nutrition.chat_completion
-        self.addCleanup(setattr, nutrition, "chat_completion", original)
-        nutrition.chat_completion = lambda *args, **kwargs: {
-            "name": "n" * 300, "calories": 100, "protein": 1, "carbs": 2, "fat": 3,
-        }
-        result = nutrition.suggest_nutrition("Dal", "1 bowl", {})
-        self.assertEqual(len(result["name"]), store.MAX_NAME_LENGTH)
-        store.normalize_entry({**result, "meal": "lunch", "date": "2026-10-26"})
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 **LLM Nutrition & Recipe Service**
 
-Turn free text about food into structured, validated nutrition data. A prompt-first web app and a command-line tool, with optional AI estimation and recipe generation from OpenRouter or any local OpenAI-compatible model.
+Turn free text about food into structured, validated nutrition data. A prompt-first web app with optional AI estimation and recipe generation from OpenRouter or any local OpenAI-compatible model.
 
 <p align="center">
   <img src="screenshots/compose-estimate.png" alt="NutriParse Compose view: the meal '2 rotis, dal, and a glass of lassi' parsed into three editable rows — Roti, Dal and Lassi — with calories, protein, carbs and fat, totalling 470 kcal">
@@ -20,18 +20,17 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#
 - **Manual entry** — add a row by hand when you already know the numbers, or when the model is unreachable
 - Every parsed name and number stays editable, and totals are recomputed from the rows you can see
 - Failures surface as typed messages with a retry; `?sample=1` previews a resolved result without a model call
-- Seven-day daily summary with progress toward the goal in the CLI
-- One journal store: the web app, the CLI, and the Food Journal all read and write the same `data.json` through `app/journal/store.py`
+- One journal store: the Compose view and the Food Journal both read and write the same `data.json` through `app/journal/store.py`
 - A committed evaluation harness scores `/api/parse` against reference calorie ranges, so claims about the model's accuracy carry a table and a date
 
 ## Tech stack
 
 | Layer | What NutriParse uses |
 | --- | --- |
-| Language | Python 3.10+ for the API, CLI, store, and evaluation harness; vanilla JavaScript in the browser |
+| Language | Python 3.10+ for the API, store, and evaluation harness; vanilla JavaScript in the browser |
 | Backend | FastAPI on Uvicorn, with Starlette and Pydantic underneath |
 | Frontend | HTML5, CSS, and plain JavaScript — no framework, bundler, or build step |
-| API surface | REST/JSON endpoints for parsing, cooking, suggestions, recipe images, and journal CRUD |
+| API surface | REST/JSON endpoints for parsing, cooking, recipe images, and journal CRUD |
 | LLM providers | OpenRouter by default; any OpenAI-compatible endpoint for local inference — Ollama (default), llama.cpp, LM Studio, vLLM |
 | Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
 | Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a process-level lock — no database |
@@ -52,24 +51,16 @@ Install the backend dependencies once:
 python -m pip install -r requirements.txt
 ```
 
-The journal store and CLI need nothing beyond the standard library. Recipe images are optional and use a separate local service (see below).
+The journal store needs nothing beyond the standard library. Recipe images are optional and use a separate local service (see below).
 
 ## Usage
 
-### Command-line interface
-
-```powershell
-python nutriparse.py
-```
-
-Follow the on-screen menu to track your intake. The CLI and the web app share one journal (`data.json`, in this folder), so an entry saved in the browser shows up here and the other way round. Entries are read fresh on every command rather than held in memory, which is what makes that true. Option 6 (Suggest nutrition with AI) calls the backend server at `http://localhost:8100`, so start `server.py` first if you want to use it.
-
 ### Web interface
 
-1. Start the backend server:
+1. Start the backend server from the repository root:
 
 ```powershell
-python server.py
+python -m app.main
 ```
 
 2. Open http://localhost:8100 in your browser. The same app also serves interactive API documentation at http://localhost:8100/docs.
@@ -90,7 +81,7 @@ The app has two views, switched from the top bar.
   <img src="screenshots/journal.png" alt="NutriParse Journal view: 1,925 of 2,200 kcal for today with protein, carbs and fat totals, an editable daily goal, and history grouped by day with per-day totals">
 </p>
 
-<p align="center"><sub><b>Journal.</b> Today against the goal, macros to the gram, and history grouped by day — reading the same store the CLI writes to.</sub></p>
+<p align="center"><sub><b>Journal.</b> Today against the goal, macros to the gram, and history grouped by day — reading the same store Compose writes to.</sub></p>
 
 Add `?sample=1` or `?sample=cook` to preview either resolved Compose state without a model call, and `?view=journal` to open the Journal view directly.
 
@@ -100,14 +91,14 @@ Add `?sample=1` or `?sample=cook` to preview either resolved Compose state witho
 
 ```powershell
 python scripts/seed_demo.py
-python server.py --demo
+python -m app.main --demo
 ```
 
-Open http://localhost:8100/?view=journal. `server.py --demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `scripts/seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start `server.py` without `--demo` to go back to your real journal.
+Open http://localhost:8100/?view=journal. `--demo` only changes which file the journal API serves; AI, Cook and images behave as usual. Re-run `scripts/seed_demo.py` whenever you want the sample dates to move up to the current day, and delete `data.demo.json` when you are done. Start the server without `--demo` to go back to your real journal.
 
 ### Where the journal lives
 
-The server owns `data.json`; the browser keeps no copy of its own. Saving in Compose posts to the server, every mutation answers with the whole updated document, and both views render from that answer. `app/journal/store.py` holds the rules both front ends share — validation, id assignment, atomic writes — and the CLI calls it directly because it runs on the same machine as the file.
+The server owns `data.json`; the browser keeps no copy of its own. Saving in Compose posts to the server, every mutation answers with the whole updated document, and both views render from that answer. `app/journal/store.py` holds the rules the API applies — validation, id assignment, atomic writes.
 
 | Endpoint | Body | Returns |
 | --- | --- | --- |
@@ -117,11 +108,9 @@ The server owns `data.json`; the browser keeps no copy of its own. Saving in Com
 | `DELETE /api/journal/entries/<id>` | — | the document without that row |
 | `POST /api/journal/goal` | `{"calorie_goal": 2200}` | the document with the new goal |
 
-Writes are validated before they touch the file and then swapped in atomically, so a crash mid-write cannot leave a half-written journal behind. A `data.json` that cannot be parsed is reported — HTTP 500 from the API, exit 1 from the CLI — rather than quietly replaced with a fresh one. Journal writes also check the request's `Origin` and refuse cross-site ones with 403; reads stay open because they change nothing.
+Writes are validated before they touch the file and then swapped in atomically, so a crash mid-write cannot leave a half-written journal behind. A `data.json` that cannot be parsed is reported as an HTTP 500 rather than quietly replaced with a fresh one. Journal writes also check the request's `Origin` and refuse cross-site ones with 403; reads stay open because they change nothing.
 
-Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The Food Journal is available at http://localhost:8100/food-journal.html and reads and writes the same store. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so a CLI save racing a browser save is last-write-wins rather than a transaction.
-
-`/api/suggest` (single-food estimation, once behind the journal's "Suggest with AI" button) is still served and is still used by CLI option 6. The Compose surface uses `/api/parse` instead.
+Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The Food Journal is available at http://localhost:8100/food-journal.html and reads and writes the same store. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so two server processes writing the same file are last-write-wins rather than a transaction.
 
 ### Local recipe images (NVIDIA CUDA)
 
@@ -143,7 +132,7 @@ cp .env.example .env
 
 2. Fill in `OPENROUTER_API_KEY` with your OpenRouter key. Optionally set `OPENROUTER_MODEL` (defaults to `openrouter/free`). To run without cloud calls, see "Local models" below. Recipe images do not use this key; they are generated locally by the image service.
 
-3. Start `server.py` and compose a meal in the browser, or use CLI option 6.
+3. Start the server with `python -m app.main` and compose a meal in the browser.
 
 ### Local models (no cloud calls)
 
@@ -204,10 +193,10 @@ LLM_REASONING_EFFORT=
 
 ```powershell
 curl http://localhost:8080/v1/models
-python server.py
+python -m app.main
 ```
 
-Open http://localhost:8100/, compose a meal, and check the request-details panel. A healthy call shows provider `local`, your alias, a latency in seconds, token counts, and the parsed items. `/api/parse` is also what the Food Journal's Log a meal tab and the CLI's estimate option use, so all three exercise the same path.
+Open http://localhost:8100/, compose a meal, and check the request-details panel. A healthy call shows provider `local`, your alias, a latency in seconds, token counts, and the parsed items. `/api/parse` is what the Compose surface and the Food Journal's Log a meal tab use, so both exercise the same path.
 
 #### Ollama
 
@@ -279,14 +268,14 @@ python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests
 ```
 
-Both front ends are also exercised with headless-browser runs of the Compose, Journal and Cook surfaces during development; those live outside the repo.
+Both browser surfaces are also exercised with headless-browser runs of the Compose, Journal and Cook views during development; those live outside the repo.
 
 ## Model evaluation
 
 `evals/` holds a committed harness that scores `/api/parse` against fixed meals with reference calorie ranges. It exists because "the model under-counts" is an anecdote until it is measured, and because a prompt change needs something to compare against.
 
 ```powershell
-python server.py                    # in one terminal
+python -m app.main                  # in one terminal
 python evals/run_parse_eval.py      # in another
 python evals/run_parse_eval.py --check-fixtures   # offline: validate the cases only
 ```
@@ -297,17 +286,16 @@ The committed run is a snapshot of the local model (`qwen3.5:9b`, 21 October 202
 
 ## File layout
 
-The application is a package (`app/`) behind two small compatibility launchers,
-with the browser app under `web/`. Each folder owns one concern, so a change to
-recipes does not sit in the same file as a change to static routes.
+The application is a package (`app/`) with the browser app under `web/`. Each
+folder owns one concern, so a change to recipes does not sit in the same file as
+a change to static routes.
 
 ```text
 app/
   config.py            paths, request limits, .env loading, provider resolution
   logging_config.py    rotating model and image logs
   main.py              FastAPI factory, router wiring, server entry point
-  cli.py               the interactive terminal front end
-  journal/store.py     shared journal: validation, atomic writes, totals
+  journal/store.py     shared journal: validation, atomic writes
   services/            llm.py, nutrition.py, recipes.py, images.py
   web/
     dependencies.py    JSON body rules, same-origin guard, journal/LLM helpers
@@ -330,11 +318,10 @@ scripts/
 tests/                 store, asset-link, and FastAPI tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
-server.py              compatibility launcher for `python server.py` / `uvicorn server:app`
-nutriparse.py          compatibility launcher for the CLI
+GLOSSARY.md            the project's domain language
 requirements.txt       backend dependencies (FastAPI, Uvicorn)
 requirements-dev.txt   adds the HTTP test transport (`httpx`)
-data.json              the journal, shared by the CLI and the web app (created on first write; ignored by Git)
+data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
 .env                   your OpenRouter API key (create from `.env.example`; do not commit)
 .image-tools/, models/ downloaded image runtime and models (ignored by Git)
 .llm-tools/            downloaded llama.cpp runtime (ignored by Git)

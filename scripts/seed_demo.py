@@ -6,7 +6,7 @@ anchored to today, so the Journal view has a full today card, history, and a
 varied set of days (one over goal, one light) to photograph.
 
     python scripts/seed_demo.py
-    python server.py --demo
+    python -m app.main --demo
     http://localhost:8100/?view=journal
 
 Re-run the seed whenever the dates should move up to the current day.
@@ -132,7 +132,7 @@ def main():
     days = len({entry["date"] for entry in document["entries"]})
     print(f"Wrote {len(document['entries'])} entries across {days} days to {DEMO_PATH.name}.")
     print(f"Daily goal: {document['calorie_goal']} kcal")
-    print("Next: python server.py --demo, then http://localhost:8100/?view=journal")
+    print("Next: python -m app.main --demo, then http://localhost:8100/?view=journal")
 
 
 if __name__ == "__main__":
