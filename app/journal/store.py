@@ -8,6 +8,11 @@ keeping separate ones.
 Every write validates the incoming entries, re-reads the document, applies the
 change, and swaps the new file in atomically through os.replace. That means a
 crash mid-write cannot leave a half-written journal behind.
+
+Writers are serialised twice: a thread lock covers requests inside one server
+process, and a sidecar lock file (``data.json.lock``) covers separate processes
+such as two Uvicorn workers. Readers stay lock-free because ``os.replace`` only
+ever exposes a complete document.
 """
 
 import json
@@ -15,7 +20,9 @@ import math
 import os
 import tempfile
 import threading
+import time
 import uuid
+from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 
@@ -29,9 +36,9 @@ MAX_PORTION_LENGTH = 120
 MEALS = ("breakfast", "lunch", "dinner", "snack")
 
 # One process can serve several requests at once, so read-modify-write cycles
-# are serialised here. A second process on the same file is still possible
-# (two server processes); see the README for what that costs.
+# are serialised here. The sidecar file lock below covers a second process.
 _LOCK = threading.Lock()
+LOCK_TIMEOUT = 10.0
 
 
 class StoreError(Exception):
@@ -42,12 +49,108 @@ class EntryNotFound(StoreError):
     """The entry a caller asked to delete is not in the store."""
 
 
+class StoreBusy(StoreError):
+    """Another process held the write lock longer than LOCK_TIMEOUT."""
+
+
 def number(value, default=0.0):
-    """Best-effort numeric read of a value that came from a file we did not write."""
+    """Best-effort numeric read of a value that came from a file we did not write.
+
+    Shared with ``evals/run_parse_eval.py``, which grades whatever a model
+    returned before any of it reaches the store.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return default
     value = float(value)
     return value if math.isfinite(value) else default
+
+
+def _lock_windows(handle, timeout):
+    import msvcrt
+
+    handle.seek(0, os.SEEK_END)
+    if handle.tell() == 0:
+        handle.write(b"\0")
+        handle.flush()
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        except OSError:
+            if time.monotonic() >= deadline:
+                raise StoreBusy("The journal is busy; try again.") from None
+            time.sleep(0.05)
+
+
+def _lock_posix(handle, timeout):
+    import fcntl
+
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except OSError:
+            if time.monotonic() >= deadline:
+                raise StoreBusy("The journal is busy; try again.") from None
+            time.sleep(0.05)
+
+
+def _unlock(handle):
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        pass
+
+
+@contextmanager
+def _file_lock(path, timeout=LOCK_TIMEOUT):
+    """Serialise writers across processes with a sidecar lock file."""
+    lock_path = Path(str(path) + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_path, "a+b")
+    try:
+        if os.name == "nt":
+            _lock_windows(handle, timeout)
+        else:
+            _lock_posix(handle, timeout)
+        yield
+    finally:
+        _unlock(handle)
+        handle.close()
+
+
+def _read_text(path, attempts=8, delay=0.05):
+    """Read the journal, retrying the brief window when Windows holds the file."""
+    for attempt in range(attempts):
+        try:
+            return path.read_text(encoding="utf-8")
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
+def _replace(source, destination, attempts=8, delay=0.05):
+    """Swap the file in, retrying the brief window when Windows holds it open."""
+    for attempt in range(attempts):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
 
 
 def _clean_number(value, field):
@@ -122,7 +225,7 @@ def load(path=DEFAULT_PATH):
     if not path.exists():
         return {"calorie_goal": DEFAULT_GOAL, "entries": []}
     try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = json.loads(_read_text(path))
     except (OSError, json.JSONDecodeError) as error:
         raise StoreError(f"{path.name} could not be read: {error}") from error
     if not isinstance(raw, dict):
@@ -157,7 +260,7 @@ def _write(path, document):
             file.write(text)
             file.flush()
             os.fsync(file.fileno())
-        os.replace(temp_name, path)
+        _replace(temp_name, path)
     except BaseException:
         try:
             os.unlink(temp_name)
@@ -179,7 +282,7 @@ def _validated_batch(entries):
 def add_entries(path, entries):
     """Append validated entries and return the whole updated document."""
     validated = _validated_batch(entries)
-    with _LOCK:
+    with _LOCK, _file_lock(path):
         document = load(path)
         document["entries"] = document["entries"] + validated
         return _write(path, document)
@@ -193,7 +296,7 @@ def update_entry(path, entry_id, entries):
     """
     validated = _validated_batch(entries)
     wanted = str(entry_id)
-    with _LOCK:
+    with _LOCK, _file_lock(path):
         document = load(path)
         index = next(
             (i for i, entry in enumerate(document["entries"]) if str(entry.get("id")) == wanted),
@@ -211,7 +314,7 @@ def update_entry(path, entry_id, entries):
 def delete_entry(path, entry_id):
     """Remove one entry by id and return the whole updated document."""
     wanted = str(entry_id)
-    with _LOCK:
+    with _LOCK, _file_lock(path):
         document = load(path)
         remaining = [entry for entry in document["entries"] if str(entry.get("id")) != wanted]
         if len(remaining) == len(document["entries"]):
@@ -223,7 +326,7 @@ def delete_entry(path, entry_id):
 def set_goal(path, goal):
     """Set the daily calorie goal and return the whole updated document."""
     value = _clean_goal(goal)
-    with _LOCK:
+    with _LOCK, _file_lock(path):
         document = load(path)
         document["calorie_goal"] = value
         return _write(path, document)

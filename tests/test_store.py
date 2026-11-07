@@ -9,6 +9,7 @@ Run them with:  python -m unittest discover -s tests
 """
 
 import json
+import multiprocessing
 import sys
 import tempfile
 import threading
@@ -140,8 +141,13 @@ class TestAddEntries(StoreTestCase):
 
     def test_no_temp_files_are_left_behind(self):
         store.add_entries(self.path, [self.entry()])
-        leftovers = [item.name for item in self.path.parent.iterdir() if item.name != self.path.name]
+        lock_name = f"{self.path.name}.lock"
+        leftovers = [
+            item.name for item in self.path.parent.iterdir()
+            if item.name not in {self.path.name, lock_name}
+        ]
         self.assertEqual(leftovers, [])
+        self.assertTrue((self.path.parent / lock_name).exists())
 
 
 class TestValidation(StoreTestCase):
@@ -311,6 +317,40 @@ class TestConcurrentWrites(StoreTestCase):
         document = store.load(self.path)
         self.assertEqual(len(document["entries"]), 12)
         self.assertEqual(len({row["id"] for row in document["entries"]}), 12)
+
+
+def _process_writer(path, name, gate):
+    if not gate.wait(10):
+        raise RuntimeError("the parent never opened the gate")
+    store.add_entries(path, [{
+        "name": name,
+        "calories": 100,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0,
+        "meal": "lunch",
+        "date": "2026-10-21",
+    }])
+
+
+class TestCrossProcessWrites(StoreTestCase):
+    def test_separate_processes_do_not_lose_rows(self):
+        context = multiprocessing.get_context("spawn")
+        gate = context.Event()
+        writers = [
+            context.Process(target=_process_writer, args=(str(self.path), f"Row {index}", gate))
+            for index in range(4)
+        ]
+        for writer in writers:
+            writer.start()
+        gate.set()
+        for writer in writers:
+            writer.join(20)
+
+        self.assertEqual([writer.exitcode for writer in writers], [0, 0, 0, 0])
+        document = store.load(self.path)
+        self.assertEqual(len(document["entries"]), 4)
+        self.assertEqual(len({row["id"] for row in document["entries"]}), 4)
 
 
 if __name__ == "__main__":

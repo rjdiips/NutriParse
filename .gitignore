@@ -7,6 +7,8 @@ logs/
 .vscode/
 data.json
 data.demo.json
+data.json.lock
+data.demo.json.lock
 
 # Local design prototypes
 prototype-*
