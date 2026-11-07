@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter
 
-from ..http import json_response
+from ..schemas import HealthResponse
 
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse)
 def health():
-    return json_response({"status": "ok"})
+    return {"status": "ok"}

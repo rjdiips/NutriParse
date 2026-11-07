@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from .config import HOST, PORT, env_file_mtime, load_env, resolve_llm
 from .journal import store
 from .logging_config import configure_logging
-from .web.http import register_error_handlers
+from .web.http import register_api_headers, register_error_handlers
 from .web.routers import ai, health, images, journal
 from .web.static import register_static_routes
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     application.state.env_mtime = env_file_mtime()
     application.state.store_path = store.DEFAULT_PATH
 
+    register_api_headers(application)
     register_error_handlers(application)
     application.include_router(health.router)
     application.include_router(journal.router)

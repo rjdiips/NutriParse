@@ -9,6 +9,7 @@ round trip, the body rules, and the same-origin check on writes.
 Run them with:  python -m unittest discover -s tests
 """
 
+import json
 import sys
 import tempfile
 import unittest
@@ -24,6 +25,7 @@ try:
     from app.journal import store
     from app.main import app
     from app.services import nutrition, recipes
+    from app.web.routers import ai, images
 except Exception as error:  # pragma: no cover - only without the API dependencies
     TestClient = None
     SKIP_REASON = f"API dependencies are unavailable: {error}"
@@ -77,6 +79,33 @@ class TestStaticAllowlist(ApiTestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_openapi_documents_every_json_body(self):
+        schema = app.openapi()
+        operations = (
+            ("/api/parse", "post"),
+            ("/api/leftover-alchemist", "post"),
+            ("/api/recipe-image", "post"),
+            ("/api/journal/entries", "post"),
+            ("/api/journal/goal", "post"),
+            ("/api/journal/entries/{entry_id}", "put"),
+        )
+        for path, method in operations:
+            with self.subTest(path=path):
+                request_body = schema["paths"][path][method]["requestBody"]
+                self.assertIn("application/json", request_body["content"])
+
+    def test_openapi_documents_response_models(self):
+        schema = app.openapi()
+        for path, method in (
+            ("/api/parse", "post"),
+            ("/api/leftover-alchemist", "post"),
+            ("/api/journal", "get"),
+            ("/health", "get"),
+        ):
+            with self.subTest(path=path):
+                content = schema["paths"][path][method]["responses"]["200"]["content"]
+                self.assertIn("application/json", content)
 
     def test_public_files_are_served(self):
         response = self.client.get("/")
@@ -269,6 +298,92 @@ class TestRequestBodies(ApiTestCase):
 
     def test_unknown_route_is_404(self):
         self.assert_error(self.client.get("/api/nope"), 404, "Not Found")
+
+
+class TestResponseModels(ApiTestCase):
+    """Typed responses must accept the real shapes the services produce."""
+
+    def test_success_responses_keep_the_api_headers(self):
+        response = self.client.get("/api/journal")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+
+    def test_legacy_numeric_ids_survive_the_response_model(self):
+        Path(app.state.store_path).write_text(json.dumps({
+            "calorie_goal": 1800,
+            "entries": [{
+                "id": 1750000000.5, "name": "Dal", "calories": 150,
+                "meal": "lunch", "date": "2026-10-20",
+                "protein": 9, "carbs": 20, "fat": 4,
+            }],
+        }), encoding="utf-8")
+        response = self.client.get("/api/journal")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["entries"][0]["id"], "1750000000.5")
+
+    def test_parse_success_matches_the_response_model(self):
+        original = ai.parse_meal
+        self.addCleanup(setattr, ai, "parse_meal", original)
+        ai.parse_meal = lambda text, env: {
+            "items": [{
+                "name": "Dal", "portion": "1 bowl", "calories": 150,
+                "protein": 9, "carbs": 20, "fat": 4,
+            }],
+            "totals": {"calories": 150, "protein": 9, "carbs": 20, "fat": 4},
+            "meta": {
+                "provider": "local", "model": "test", "elapsed_ms": 5,
+                "prompt_tokens": 10, "completion_tokens": 20,
+            },
+        }
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"][0]["name"], "Dal")
+        self.assertEqual(response.json()["totals"]["calories"], 150)
+
+    def test_recipe_success_matches_the_response_model(self):
+        original = ai.suggest_recipes
+        self.addCleanup(setattr, ai, "suggest_recipes", original)
+        recipe = {
+            "title": "Dal",
+            "description": "A bowl",
+            "ingredients_used": ["dal"],
+            "pantry_extras": [],
+            "steps": ["Boil", "Simmer", "Season", "Serve"],
+            "servings": 2,
+            "nutrition": {"calories": 300, "protein": 12, "carbs": 40, "fat": 8},
+            "image": None,
+            "image_pending": False,
+            "image_unavailable": True,
+        }
+        ai.suggest_recipes = lambda ingredients, use_soon, env: {
+            "recipes": [recipe, recipe, recipe],
+            "meta": {
+                "provider": "local", "model": "test", "elapsed_ms": 5,
+                "prompt_tokens": 10, "completion_tokens": 20,
+            },
+        }
+        response = self.client.post(
+            "/api/leftover-alchemist", json={"ingredients": "dal", "use_soon": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["recipes"]), RECIPE_COUNT)
+
+    def test_image_success_matches_the_response_model(self):
+        original = images.generate_local_recipe_image
+        self.addCleanup(setattr, images, "generate_local_recipe_image", original)
+        images.generate_local_recipe_image = (
+            lambda recipe, endpoint, env: "data:image/png;base64,AAAA"
+        )
+        app.state.env = {
+            "LOCAL_IMAGE_GENERATION_ENABLED": "true",
+            "LOCAL_IMAGE_API_URL": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+        }
+        app.state.env_mtime = env_file_mtime()
+        response = self.client.post(
+            "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["image"], "data:image/png;base64,AAAA")
 
 
 class TestAiAndImages(ApiTestCase):

@@ -20,6 +20,18 @@ def json_response(content, status_code=200):
     )
 
 
+def register_api_headers(app):
+    """Keep the no-store/nosniff headers now that routes return typed models."""
+
+    @app.middleware("http")
+    async def api_headers(request, call_next):
+        response = await call_next(request)
+        if request.url.path == "/health" or request.url.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        return response
+
+
 def register_error_handlers(app):
     """Install the API's typed error envelope on the application."""
 
@@ -29,8 +41,15 @@ def register_error_handlers(app):
         return json_response({"error": detail}, error.status_code)
 
     @app.exception_handler(RequestValidationError)
-    async def validation_error_handler(_request, _error):
-        return json_response({"error": "Invalid request"}, 400)
+    async def validation_error_handler(_request, error):
+        kinds = {item.get("type") for item in error.errors()}
+        if "json_invalid" in kinds:
+            detail = "Invalid JSON body"
+        elif kinds & {"model_attributes_type", "dict_type"}:
+            detail = "JSON body must be an object"
+        else:
+            detail = "Invalid request"
+        return json_response({"error": detail}, 400)
 
     @app.exception_handler(Exception)
     async def unexpected_error_handler(request, error):

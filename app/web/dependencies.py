@@ -4,22 +4,25 @@ import json
 import threading
 import time
 import uuid
-from typing import Annotated, Callable
+from typing import Callable
 from urllib.parse import urlsplit
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 
 from ..config import MAX_REQUEST_BYTES, env_file_mtime, load_env, resolve_llm
 from ..journal import store
 from ..logging_config import LOGGER
 from ..services.llm import LLMRequestError
-from .http import json_response
 
 _ENV_LOCK = threading.Lock()
 
 
 async def json_body(request: Request):
-    """Read and validate a JSON object body exactly as the old handler did."""
+    """Validate the JSON envelope before FastAPI parses a typed model.
+
+    Content type, length, size, and the "must be an object" rule all keep the
+    messages the API has always returned; Pydantic owns field-level shapes.
+    """
     content_type = request.headers.get("content-type", "")
     if content_type.split(";", 1)[0].strip().lower() != "application/json":
         raise HTTPException(415, "Content-Type must be application/json")
@@ -46,9 +49,6 @@ async def json_body(request: Request):
     if not isinstance(payload, dict):
         raise HTTPException(400, "JSON body must be an object")
     return payload
-
-
-JSONBody = Annotated[dict, Depends(json_body)]
 
 
 def require_same_origin(request):
@@ -78,6 +78,8 @@ def current_env(request):
 def write_journal(request, operation, missing_is_404=False):
     try:
         document = operation()
+    except store.StoreBusy as error:
+        raise HTTPException(503, str(error)) from error
     except store.EntryNotFound as error:
         if not missing_is_404:
             raise HTTPException(400, str(error)) from error
@@ -87,7 +89,7 @@ def write_journal(request, operation, missing_is_404=False):
     except OSError as error:
         LOGGER.warning("event=journal_write_failed error=%s", error)
         raise HTTPException(500, "The journal could not be written") from error
-    return json_response(document)
+    return document
 
 
 def run_ai_feature(feature, operation: Callable[[], dict], env):

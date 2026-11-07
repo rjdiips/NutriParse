@@ -3,22 +3,27 @@
 import time
 import uuid
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...logging_config import IMAGE_LOGGER
 from ...services.images import generate_local_recipe_image, image_int
-from ..dependencies import JSONBody, current_env
-from ..http import json_response
+from ..dependencies import current_env, json_body
+from ..schemas import ApiError, ImageRequest, ImageResponse
 
 router = APIRouter(prefix="/api", tags=["images"])
 
 
-@router.post("/recipe-image")
-def recipe_image(request: Request, payload: JSONBody):
-    title = payload.get("title")
-    description = payload.get("description", "")
-    if (not isinstance(title, str) or not title.strip()
-            or not isinstance(description, str)):
+@router.post(
+    "/recipe-image",
+    response_model=ImageResponse,
+    responses={400: {"model": ApiError}, 413: {"model": ApiError},
+               415: {"model": ApiError}, 503: {"model": ApiError}},
+    dependencies=[Depends(json_body)],
+)
+def recipe_image(request: Request, payload: ImageRequest):
+    title = payload.title
+    description = payload.description
+    if not title.strip():
         raise HTTPException(400, "A recipe title and description are required")
     if len(title) > 120 or len(description) > 300:
         raise HTTPException(400, "Recipe title or description is too long")
@@ -68,4 +73,4 @@ def recipe_image(request: Request, payload: JSONBody):
         request_id, round((time.monotonic() - started) * 1000),
         len(image.partition(",")[2]) * 3 // 4,
     )
-    return json_response({"image": image})
+    return {"image": image}
