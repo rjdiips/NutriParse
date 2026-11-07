@@ -33,7 +33,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#
 | API surface | REST/JSON endpoints for parsing, cooking, recipe images, and journal CRUD |
 | LLM providers | OpenRouter by default; any OpenAI-compatible endpoint for local inference — Ollama (default), llama.cpp, LM Studio, vLLM |
 | Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
-| Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a process-level lock — no database |
+| Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a cross-process lock file — no database |
 | Configuration | `.env` read by the backend, with process environment variables taking priority |
 | Testing | Python `unittest` for the store and FastAPI routes; `httpx` provides the `TestClient` transport |
 | Evaluation | A committed harness in `evals/` with fixed meal fixtures, reference calorie ranges, and Markdown/JSON results |
@@ -62,6 +62,14 @@ The journal store needs nothing beyond the standard library. Recipe images are o
 ```powershell
 python -m app.main
 ```
+
+That entry point prints the startup banner and a warning when no API key is configured, and it accepts `--demo`. To iterate on the backend with automatic reloads, run Uvicorn directly instead:
+
+```powershell
+python -m uvicorn app.main:app --reload --port 8100
+```
+
+The `uvicorn` form imports the module-level `app` directly, so it skips `main()` — and with it the banner, the missing-key warning, and the `--demo` flag. Bind with the command-line flags: Uvicorn does not read the `HOST`/`PORT` constants from `app/config.py`. The app still loads `.env` itself for journals, providers, and image settings.
 
 2. Open http://localhost:8100 in your browser. The same app also serves interactive API documentation at http://localhost:8100/docs.
 
@@ -110,7 +118,9 @@ The server owns `data.json`; the browser keeps no copy of its own. Saving in Com
 
 Writes are validated before they touch the file and then swapped in atomically, so a crash mid-write cannot leave a half-written journal behind. A `data.json` that cannot be parsed is reported as an HTTP 500 rather than quietly replaced with a fresh one. Journal writes also check the request's `Origin` and refuse cross-site ones with 403; reads stay open because they change nothing.
 
-Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The Food Journal is available at http://localhost:8100/food-journal.html and reads and writes the same store. Two caveats worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once; and the write lock is held per process, so two server processes writing the same file are last-write-wins rather than a transaction.
+Writers are serialised twice: a thread lock covers requests inside one server process, and a sidecar lock file (`data.json.lock`, created next to the journal and ignored by Git) covers separate processes — two Uvicorn workers, or a server and a script. A writer that cannot take the file lock within 10 seconds fails with HTTP 503 instead of overwriting another process's rows. Readers take no lock, because `os.replace` only ever exposes a complete document. The lock file stays behind with a single byte in it; delete it while no server is running if you want a clean directory.
+
+Entries saved by an earlier version of the web app, in `localStorage` under `ct_data`, are moved up once on the first page load: valid rows are posted to the server and removed from the browser, and any row the server would reject is left in the browser rather than dropped. The Food Journal is available at http://localhost:8100/food-journal.html and reads and writes the same store. One caveat worth stating: the migration assumes one tab is open, so two tabs loading at the same instant can each claim the same browser rows and you may see duplicates once.
 
 ### Local recipe images (NVIDIA CUDA)
 
@@ -261,7 +271,7 @@ path, and image data and API credentials are never logged. Each log rotates at
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, and the rules that trim and validate model output:
+The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the API headers, and the rules that trim and validate model output:
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -295,11 +305,12 @@ app/
   config.py            paths, request limits, .env loading, provider resolution
   logging_config.py    rotating model and image logs
   main.py              FastAPI factory, router wiring, server entry point
-  journal/store.py     shared journal: validation, atomic writes
+  journal/store.py     shared journal: validation, atomic writes, cross-process lock
   services/            llm.py, nutrition.py, recipes.py, images.py
   web/
     dependencies.py    JSON body rules, same-origin guard, journal/LLM helpers
-    http.py            one JSON response shape and exception handlers
+    http.py            one JSON response shape, API headers, exception handlers
+    schemas.py         Pydantic request/response models behind /docs
     static.py          /assets mount plus explicit page and legacy asset routes
     routers/           health.py, journal.py, ai.py, images.py
 web/
@@ -318,7 +329,6 @@ scripts/
 tests/                 store, asset-link, and FastAPI tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
-GLOSSARY.md            the project's domain language
 requirements.txt       backend dependencies (FastAPI, Uvicorn)
 requirements-dev.txt   adds the HTTP test transport (`httpx`)
 data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
