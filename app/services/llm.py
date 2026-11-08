@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
-from ..config import HOST, PORT, resolve_llm
+from ..config import HOST, PORT, Settings
 
 
 class LLMRequestError(RuntimeError):
@@ -28,34 +28,32 @@ def safe_error_excerpt(raw, secrets=()):
     return excerpt[:1200]
 
 
-def chat_completion(prompt, system_prompt, env, temperature, default_timeout,
-                    invalid_json_message, meta=None):
+def chat_completion(prompt, system_prompt, settings: Settings, temperature,
+                    default_timeout, invalid_json_message, meta=None):
     """Call the configured OpenAI-compatible chat endpoint and parse JSON.
 
     When ``meta`` is a dict, it is filled with provider, model, latency, and
     token counts so callers can surface call detail without logging payloads.
     """
     started = time.monotonic()
-    config = resolve_llm(env, default_timeout)
-    if config["provider"] == "openrouter" and not config["api_key"]:
+    config = settings.llm(default_timeout)
+    if config.provider == "openrouter" and not config.api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not configured")
 
     payload = {
-        "model": config["model"],
+        "model": config.model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ],
         "temperature": temperature,
     }
-    if config["provider"] == "local":
+    if config.provider == "local":
         # Thinking models can spend thousands of tokens before emitting any
         # content; "none" keeps replies fast and non-empty.
-        effort = env.get("LLM_REASONING_EFFORT", "none").strip()
-        if effort:
-            payload["reasoning_effort"] = effort
-        json_mode = env.get("LLM_JSON_MODE", "true").strip().lower()
-        if json_mode not in {"0", "false", "no", "off"}:
+        if settings.llm_reasoning_effort:
+            payload["reasoning_effort"] = settings.llm_reasoning_effort
+        if settings.llm_json_mode:
             payload["response_format"] = {"type": "json_object"}
     body = json.dumps(payload).encode("utf-8")
     headers = {
@@ -63,32 +61,32 @@ def chat_completion(prompt, system_prompt, env, temperature, default_timeout,
         "HTTP-Referer": f"http://{HOST}:{PORT}/",
         "X-Title": "NutriParse",
     }
-    if config["api_key"]:
-        headers["Authorization"] = f"Bearer {config['api_key']}"
+    if config.api_key:
+        headers["Authorization"] = f"Bearer {config.api_key}"
     request = urllib.request.Request(
-        f"{config['base_url']}/chat/completions", data=body, headers=headers, method="POST"
+        f"{config.base_url}/chat/completions", data=body, headers=headers, method="POST"
     )
 
-    label = config["label"]
+    label = config.label
     try:
-        with urllib.request.urlopen(request, timeout=config["timeout"]) as response:
+        with urllib.request.urlopen(request, timeout=config.timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         # Keep provider details out of the browser response, but retain enough
         # sanitized context in the server log to diagnose upstream failures.
         response_body = exc.read(4096)
-        endpoint = urlsplit(config["base_url"])
+        endpoint = urlsplit(config.base_url)
         diagnostic = (
-            f"provider={config['provider']} model={config['model']} "
+            f"provider={config.provider} model={config.model} "
             f"endpoint={endpoint.scheme}://{endpoint.netloc}{endpoint.path} "
-            f"upstream_status={exc.code} response={safe_error_excerpt(response_body, (config['api_key'], prompt, system_prompt))}"
+            f"upstream_status={exc.code} response={safe_error_excerpt(response_body, (config.api_key, prompt, system_prompt))}"
         )
         raise LLMRequestError(f"{label} returned HTTP {exc.code}", diagnostic) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         reason = str(getattr(exc, "reason", exc)).replace("\r", " ").replace("\n", " ")[:240]
-        endpoint = urlsplit(config["base_url"])
+        endpoint = urlsplit(config.base_url)
         diagnostic = (
-            f"provider={config['provider']} model={config['model']} "
+            f"provider={config.provider} model={config.model} "
             f"endpoint={endpoint.scheme}://{endpoint.netloc}{endpoint.path} "
             f"transport_error={type(exc).__name__} reason={reason}"
         )
@@ -116,8 +114,8 @@ def chat_completion(prompt, system_prompt, env, temperature, default_timeout,
         usage = payload.get("usage")
         usage = usage if isinstance(usage, dict) else {}
         meta.update({
-            "provider": config["provider"],
-            "model": config["model"],
+            "provider": config.provider,
+            "model": config.model,
             "elapsed_ms": round((time.monotonic() - started) * 1000),
             "prompt_tokens": usage.get("prompt_tokens"),
             "completion_tokens": usage.get("completion_tokens"),

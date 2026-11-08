@@ -10,6 +10,7 @@ Run them with:  python -m unittest discover -s tests
 """
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -21,9 +22,15 @@ sys.path.insert(0, str(REPO_ROOT))
 try:
     from fastapi.testclient import TestClient
 
-    from app.config import MAX_MEAL_ITEMS, MAX_REQUEST_BYTES, RECIPE_COUNT, env_file_mtime
+    from app.config import (
+        MAX_MEAL_ITEMS,
+        MAX_REQUEST_BYTES,
+        RECIPE_COUNT,
+        Settings,
+        SettingsProvider,
+    )
     from app.journal import store
-    from app.main import app
+    from app.main import create_app
     from app.services import nutrition, recipes
     from app.web.routers import ai, images
 except Exception as error:  # pragma: no cover - only without the API dependencies
@@ -37,23 +44,26 @@ class ApiTestCase(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
 
-        self._previous = (
-            app.state.store_path,
-            app.state.env,
-            app.state.env_mtime,
+        self.root = Path(self._tmp.name)
+        self.env_file = self.root / ".env"
+        self.env_file.write_text("", encoding="utf-8")
+        self.settings_provider = SettingsProvider(self.env_file)
+        self.app = create_app(
+            settings_provider=self.settings_provider,
+            store_path=self.root / "data.json",
         )
-        self.addCleanup(self._restore_state)
+        self.client = TestClient(self.app, base_url="http://localhost:8100")
 
-        app.state.store_path = Path(self._tmp.name) / "data.json"
-        app.state.env = {}
-        # Pin the mtime so a request does not treat the real .env as a change.
-        app.state.env_mtime = env_file_mtime()
-        self.client = TestClient(app, base_url="http://localhost:8100")
-
-    def _restore_state(self):
-        (app.state.store_path,
-         app.state.env,
-         app.state.env_mtime) = self._previous
+    def set_settings(self, **values):
+        """Write a temporary .env and reload it, as an operator edit would."""
+        lines = []
+        for key, value in values.items():
+            if isinstance(value, bool):
+                value = "true" if value else "false"
+            lines.append(f"{key.upper()}={value}")
+        self.env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self.settings_provider.reload()
+        return self.settings_provider.current()
 
     def entry(self, **overrides):
         row = {
@@ -81,7 +91,7 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertEqual(response.json(), {"status": "ok"})
 
     def test_openapi_documents_every_json_body(self):
-        schema = app.openapi()
+        schema = self.app.openapi()
         operations = (
             ("/api/parse", "post"),
             ("/api/leftover-alchemist", "post"),
@@ -96,7 +106,7 @@ class TestStaticAllowlist(ApiTestCase):
                 self.assertIn("application/json", request_body["content"])
 
     def test_openapi_documents_response_models(self):
-        schema = app.openapi()
+        schema = self.app.openapi()
         for path, method in (
             ("/api/parse", "post"),
             ("/api/leftover-alchemist", "post"),
@@ -245,7 +255,7 @@ class TestJournal(ApiTestCase):
             headers={"Origin": "https://evil.example"},
         )
         self.assert_error(response, 403, "Journal writes must come from the NutriParse app")
-        self.assertFalse(Path(app.state.store_path).exists())
+        self.assertFalse(Path(self.app.state.store_path).exists())
 
     def test_invalid_entries_are_rejected_by_the_store(self):
         response = self.client.post(
@@ -260,7 +270,7 @@ class TestJournal(ApiTestCase):
         self.assert_error(response, 404, "That entry is no longer in the journal.")
 
     def test_corrupt_store_is_500(self):
-        Path(app.state.store_path).write_text("{ not json", encoding="utf-8")
+        Path(self.app.state.store_path).write_text("{ not json", encoding="utf-8")
         response = self.client.get("/api/journal")
         self.assertEqual(response.status_code, 500)
         self.assertIn("could not be read", response.json()["error"])
@@ -309,7 +319,7 @@ class TestResponseModels(ApiTestCase):
         self.assertEqual(response.headers["x-content-type-options"], "nosniff")
 
     def test_legacy_numeric_ids_survive_the_response_model(self):
-        Path(app.state.store_path).write_text(json.dumps({
+        Path(self.app.state.store_path).write_text(json.dumps({
             "calorie_goal": 1800,
             "entries": [{
                 "id": 1750000000.5, "name": "Dal", "calories": 150,
@@ -372,13 +382,12 @@ class TestResponseModels(ApiTestCase):
         original = images.generate_local_recipe_image
         self.addCleanup(setattr, images, "generate_local_recipe_image", original)
         images.generate_local_recipe_image = (
-            lambda recipe, endpoint, env: "data:image/png;base64,AAAA"
+            lambda recipe, endpoint, settings: "data:image/png;base64,AAAA"
         )
-        app.state.env = {
-            "LOCAL_IMAGE_GENERATION_ENABLED": "true",
-            "LOCAL_IMAGE_API_URL": "http://127.0.0.1:7860/sdapi/v1/txt2img",
-        }
-        app.state.env_mtime = env_file_mtime()
+        self.set_settings(
+            local_image_generation_enabled=True,
+            local_image_api_url="http://127.0.0.1:7860/sdapi/v1/txt2img",
+        )
         response = self.client.post(
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
         )
@@ -392,8 +401,31 @@ class TestAiAndImages(ApiTestCase):
         self.assert_error(response, 502, "OPENROUTER_API_KEY is not configured")
 
     def test_disabled_image_generation_is_503(self):
-        app.state.env = {"LOCAL_IMAGE_GENERATION_ENABLED": "false"}
-        app.state.env_mtime = env_file_mtime()
+        self.set_settings(local_image_generation_enabled=False)
+        response = self.client.post(
+            "/api/recipe-image", json={"title": "Dal", "description": "A bowl of dal"}
+        )
+        self.assert_error(response, 503, "Local image generation is disabled")
+
+    def test_an_invalid_env_edit_is_a_clear_500(self):
+        before = self.env_file.stat().st_mtime_ns
+        self.env_file.write_text("LLM_PROVIDER=cloud\n", encoding="utf-8")
+        newer = before + 1_000_000
+        os.utime(self.env_file, ns=(newer, newer))
+
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assert_error(
+            response, 500, "The .env file has invalid settings; check the server log"
+        )
+
+    def test_editing_the_env_file_applies_to_the_next_request(self):
+        before = self.env_file.stat().st_mtime_ns
+        self.env_file.write_text(
+            "LOCAL_IMAGE_GENERATION_ENABLED=false\n", encoding="utf-8"
+        )
+        newer = before + 1_000_000
+        os.utime(self.env_file, ns=(newer, newer))
+
         response = self.client.post(
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl of dal"}
         )
@@ -482,13 +514,13 @@ class TestRecipeRepair(unittest.TestCase):
 
     def test_a_sound_first_answer_is_not_repaired(self):
         self.answers(complete_answer())
-        result = recipes.suggest_recipes(["dal"], "", {})
+        result = recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
         self.assertEqual(len(self.prompts), 1)
         self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
 
     def test_a_bad_first_answer_is_repaired_once(self):
         self.answers(complete_answer(complete_recipe(steps=2)), complete_answer())
-        result = recipes.suggest_recipes(["dal"], "", {})
+        result = recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
         self.assertEqual(len(self.prompts), 2)
         self.assertIn("rejected", self.prompts[1])
         self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
@@ -497,7 +529,7 @@ class TestRecipeRepair(unittest.TestCase):
         self.answers(complete_answer(complete_recipe(steps=2)),
                      complete_answer(complete_recipe(steps=2)))
         with self.assertRaisesRegex(RuntimeError, "complete recipes"):
-            recipes.suggest_recipes(["dal"], "", {})
+            recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
         self.assertEqual(len(self.prompts), 2)
 
 

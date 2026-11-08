@@ -1,7 +1,6 @@
 """Shared FastAPI dependencies and route-level guards."""
 
 import json
-import threading
 import time
 import uuid
 from typing import Callable
@@ -9,12 +8,10 @@ from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
 
-from ..config import MAX_REQUEST_BYTES, env_file_mtime, load_env, resolve_llm
+from ..config import MAX_REQUEST_BYTES, ConfigurationError, Settings
 from ..journal import store
 from ..logging_config import LOGGER
 from ..services.llm import LLMRequestError
-
-_ENV_LOCK = threading.Lock()
 
 
 async def json_body(request: Request):
@@ -63,16 +60,18 @@ def require_same_origin(request):
         raise HTTPException(403, "Journal writes must come from the NutriParse app")
 
 
-def current_env(request):
-    """Reload .env when the file changes so settings apply without a restart."""
-    state = request.app.state
-    mtime = env_file_mtime()
-    if state.env_mtime != mtime:
-        with _ENV_LOCK:
-            if state.env_mtime != mtime:
-                state.env = load_env()
-                state.env_mtime = mtime
-    return state.env
+def current_settings(request: Request) -> Settings:
+    """Return settings, reloading .env first when the file changed."""
+    try:
+        return request.app.state.settings_provider.current()
+    except ConfigurationError as error:
+        LOGGER.error(
+            "event=settings_invalid error=%s",
+            str(error).replace("\r", " ").replace("\n", " "),
+        )
+        raise HTTPException(
+            500, "The .env file has invalid settings; check the server log"
+        ) from error
 
 
 def write_journal(request, operation, missing_is_404=False):
@@ -92,15 +91,15 @@ def write_journal(request, operation, missing_is_404=False):
     return document
 
 
-def run_ai_feature(feature, operation: Callable[[], dict], env):
+def run_ai_feature(feature, operation: Callable[[], dict], settings: Settings):
     """Run one model-backed feature with the same structured logging as before."""
     request_id = uuid.uuid4().hex[:12]
     started = time.monotonic()
-    llm = resolve_llm(env, 30)
+    llm = settings.llm(30)
     # Keep user-provided ingredients, credentials, and provider payloads out of logs.
     LOGGER.info(
         "event=llm_call_started request_id=%s feature=%s provider=%s model=%s",
-        request_id, feature, llm["provider"], llm["model"],
+        request_id, feature, llm.provider, llm.model,
     )
     try:
         result = operation()

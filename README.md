@@ -10,7 +10,7 @@ Turn free text about food into structured, validated nutrition data. A prompt-fi
 
 <p align="center"><sub><b>Compose → Estimate.</b> One line in, one editable row per food out, totals recomputed from the rows you can see.</sub></p>
 
-Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
+Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Configuration](#configuration) · [Web interface](#web-interface) · [Local models](#local-models-no-cloud-calls) · [Tests](#tests) · [Model evaluation](#model-evaluation) · [File layout](#file-layout)
 
 ## Features
 
@@ -34,7 +34,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Web interface](#
 | LLM providers | OpenRouter by default; any OpenAI-compatible endpoint for local inference — Ollama (default), llama.cpp, LM Studio, vLLM |
 | Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
 | Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a cross-process lock file — no database |
-| Configuration | `.env` read by the backend, with process environment variables taking priority |
+| Configuration | One typed `pydantic-settings` object for `.env` and the process environment, with process variables taking priority and mtime-based live reload |
 | Testing | Python `unittest` for the store and FastAPI routes; `httpx` provides the `TestClient` transport |
 | Evaluation | A committed harness in `evals/` with fixed meal fixtures, reference calorie ranges, and Markdown/JSON results |
 | Logging | Python `logging` with a 2 MB rotating handler at `logs/llm.log`, keeping five backups |
@@ -52,6 +52,10 @@ python -m pip install -r requirements.txt
 ```
 
 The journal store needs nothing beyond the standard library. Recipe images are optional and use a separate local service (see below).
+
+## Configuration
+
+Runtime settings live in `.env` (start from `.env.example`) and are parsed into one typed `app.config.Settings` object. Process environment variables override the file for every setting, including the image options and the legacy `OPENROUTER_TOKEN` / `OPEN_ROUTER_API_KEY` key aliases. The server compares the file's mtime on each request, so an edit applies to the next request without a restart. Invalid values — an unknown provider, a non-numeric image size, an out-of-range dimension — stop startup with a message naming the setting. `LLM_TIMEOUT` is the exception: a missing, invalid, or non-positive value falls back to the provider default (30 seconds for parsing and 45 for recipes on OpenRouter, 180 for a local model).
 
 ## Usage
 
@@ -302,7 +306,7 @@ a change to static routes.
 
 ```text
 app/
-  config.py            paths, request limits, .env loading, provider resolution
+  config.py            paths, request limits, typed settings, live .env reload
   logging_config.py    rotating model and image logs
   main.py              FastAPI factory, router wiring, server entry point
   journal/store.py     shared journal: validation, atomic writes, cross-process lock
@@ -326,10 +330,10 @@ scripts/
   seed_demo.py         writes data.demo.json for screenshots
   setup_image_generator.bat / start_image_generator.bat  CUDA image service
   start_llm.bat        starts a local llama.cpp server with the expected settings
-tests/                 store, asset-link, and FastAPI tests
+tests/                 store, asset-link, settings, and FastAPI tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
-requirements.txt       backend dependencies (FastAPI, Uvicorn)
+requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings)
 requirements-dev.txt   adds the HTTP test transport (`httpx`)
 data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
 .env                   your OpenRouter API key (create from `.env.example`; do not commit)
