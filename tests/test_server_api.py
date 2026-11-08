@@ -23,6 +23,11 @@ try:
     from fastapi.testclient import TestClient
 
     from app.config import (
+        DEFAULT_COOK_TIMEOUT,
+        DEFAULT_LOCAL_TIMEOUT,
+        DEFAULT_OPENROUTER_MODEL,
+        DEFAULT_PARSE_TIMEOUT,
+        IMAGE_TIMEOUT,
         MAX_MEAL_ITEMS,
         MAX_REQUEST_BYTES,
         RECIPE_COUNT,
@@ -110,6 +115,7 @@ class TestStaticAllowlist(ApiTestCase):
         for path, method in (
             ("/api/parse", "post"),
             ("/api/leftover-alchemist", "post"),
+            ("/api/config", "get"),
             ("/api/journal", "get"),
             ("/health", "get"),
         ):
@@ -151,6 +157,62 @@ class TestStaticAllowlist(ApiTestCase):
         for path in ("/requirements.txt", "/.env", "/store.py", "/data.json", "/app/main.py"):
             with self.subTest(path=path):
                 self.assert_error(self.client.get(path), 404, "Not Found")
+
+
+def milliseconds(seconds):
+    return int(round(seconds * 1000))
+
+
+class TestRuntimeConfig(ApiTestCase):
+    def test_openrouter_defaults_are_reported_in_milliseconds(self):
+        response = self.client.get("/api/config")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "provider": "openrouter",
+            "model": DEFAULT_OPENROUTER_MODEL,
+            "parse_timeout_ms": milliseconds(DEFAULT_PARSE_TIMEOUT),
+            "cook_timeout_ms": milliseconds(DEFAULT_COOK_TIMEOUT),
+            "image_timeout_ms": milliseconds(IMAGE_TIMEOUT),
+        })
+
+    def test_the_response_is_not_cached(self):
+        response = self.client.get("/api/config")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+
+    def test_local_provider_reports_the_local_default(self):
+        self.set_settings(llm_provider="local", llm_model="local-test")
+        body = self.client.get("/api/config").json()
+        self.assertEqual(body["provider"], "local")
+        self.assertEqual(body["model"], "local-test")
+        self.assertEqual(body["parse_timeout_ms"], milliseconds(DEFAULT_LOCAL_TIMEOUT))
+        self.assertEqual(body["cook_timeout_ms"], milliseconds(DEFAULT_LOCAL_TIMEOUT))
+
+    def test_llm_timeout_overrides_both_llm_timeouts(self):
+        self.set_settings(llm_provider="openrouter", llm_timeout=12.5)
+        body = self.client.get("/api/config").json()
+        self.assertEqual(body["parse_timeout_ms"], 12500)
+        self.assertEqual(body["cook_timeout_ms"], 12500)
+        # An LLM override leaves the local image service alone.
+        self.assertEqual(body["image_timeout_ms"], milliseconds(IMAGE_TIMEOUT))
+
+    def test_editing_the_timeout_changes_the_next_response(self):
+        self.set_settings(llm_provider="openrouter", llm_timeout=10)
+        first = self.client.get("/api/config").json()
+        self.set_settings(llm_provider="openrouter", llm_timeout=90)
+        second = self.client.get("/api/config").json()
+        self.assertEqual(first["parse_timeout_ms"], 10000)
+        self.assertEqual(first["cook_timeout_ms"], 10000)
+        self.assertEqual(second["parse_timeout_ms"], 90000)
+        self.assertEqual(second["cook_timeout_ms"], 90000)
+
+    def test_editing_the_provider_changes_the_next_response(self):
+        self.set_settings(llm_provider="local", llm_model="first-model")
+        first = self.client.get("/api/config").json()
+        self.set_settings(llm_provider="openrouter", openrouter_model="second-model")
+        second = self.client.get("/api/config").json()
+        self.assertEqual((first["provider"], first["model"]), ("local", "first-model"))
+        self.assertEqual((second["provider"], second["model"]), ("openrouter", "second-model"))
 
 
 class TestJournal(ApiTestCase):

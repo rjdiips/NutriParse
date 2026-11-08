@@ -35,7 +35,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Configuration](#
 | Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
 | Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a cross-process lock file — no database |
 | Configuration | One typed `pydantic-settings` object for `.env` and the process environment, with process variables taking priority and mtime-based live reload |
-| Testing | Python `unittest` for the store and FastAPI routes; `httpx` provides the `TestClient` transport |
+| Testing | Python `unittest` for the store and FastAPI routes, plus Node's built-in runner for the browser config loader; `httpx` provides the `TestClient` transport |
 | Evaluation | A committed harness in `evals/` with fixed meal fixtures, reference calorie ranges, and Markdown/JSON results |
 | Logging | Python `logging` with a 2 MB rotating handler at `logs/llm.log`, keeping five backups |
 | Tooling | pip with `requirements.txt` / `requirements-dev.txt`; Windows batch scripts for the optional CUDA image service |
@@ -56,6 +56,8 @@ The journal store needs nothing beyond the standard library. Recipe images are o
 ## Configuration
 
 Runtime settings live in `.env` (start from `.env.example`) and are parsed into one typed `app.config.Settings` object. Process environment variables override the file for every setting, including the image options and the legacy `OPENROUTER_TOKEN` / `OPEN_ROUTER_API_KEY` key aliases. The server compares the file's mtime on each request, so an edit applies to the next request without a restart. Invalid values — an unknown provider, a non-numeric image size, an out-of-range dimension — stop startup with a message naming the setting. `LLM_TIMEOUT` is the exception: a missing, invalid, or non-positive value falls back to the provider default (30 seconds for parsing and 45 for recipes on OpenRouter, 180 for a local model).
+
+Both pages read the effective parse, cook, and image timeouts from `GET /api/config` at startup; the same endpoint also reports the active provider and model. Each client waits 10 seconds longer than the server's value, so a slow provider gets the server's error rather than a premature client abort, and the request-details panel shows the timeout it used. If the config call fails, AI calls fall back to a 300-second safety net and the page says so; journal reads and writes are unaffected.
 
 ## Usage
 
@@ -275,7 +277,7 @@ path, and image data and API credentials are never logged. Each log rotates at
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the API headers, and the rules that trim and validate model output:
+The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the `/api/config` timeouts and headers, and the rules that trim and validate model output. The browser config loader's client-side waits and 300-second fallback run under Node's built-in test runner; that test skips only when Node is not installed.
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -316,7 +318,7 @@ app/
     http.py            one JSON response shape, API headers, exception handlers
     schemas.py         Pydantic request/response models behind /docs
     static.py          /assets mount plus explicit page and legacy asset routes
-    routers/           health.py, journal.py, ai.py, images.py
+    routers/           health.py, runtime.py, journal.py, ai.py, images.py
 web/
   pages/               nutriparse.html, food-journal.html
   css/nutriparse/      base, compose, results, recipes, journal
@@ -325,12 +327,13 @@ web/
   js/nutriparse/       request, estimate, recipes, inspector, journal, samples, boot
   js/food-journal.js   the second page's behaviour
   js/journal-client.js browser side of the journal API and localStorage migration
+  js/config-client.js  server-driven AI timeouts shared by both pages
   assets/              favicon files
 scripts/
   seed_demo.py         writes data.demo.json for screenshots
   setup_image_generator.bat / start_image_generator.bat  CUDA image service
   start_llm.bat        starts a local llama.cpp server with the expected settings
-tests/                 store, asset-link, settings, and FastAPI tests
+tests/                 store, asset-link, settings, FastAPI, and browser config-loader tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
 requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings)

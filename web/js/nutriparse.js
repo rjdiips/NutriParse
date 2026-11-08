@@ -6,8 +6,6 @@
 const PARSE_ENDPOINT = '/api/parse';
 const COOK_ENDPOINT = '/api/leftover-alchemist';
 const IMAGE_ENDPOINT = '/api/recipe-image';
-const PARSE_TIMEOUT_MS = 45000;
-const COOK_TIMEOUT_MS = 180000;
 
 const el = {
   text: document.getElementById('mealText'),
@@ -19,6 +17,8 @@ const el = {
   useSoonWrap: document.getElementById('useSoonWrap'),
   useSoon: document.getElementById('useSoon'),
   status: document.getElementById('status'),
+  configNotice: document.getElementById('configNotice'),
+  configNoticeMsg: document.getElementById('configNoticeMsg'),
   error: document.getElementById('error'),
   errorTitle: document.getElementById('errorTitle'),
   errorMsg: document.getElementById('errorMsg'),
@@ -104,7 +104,25 @@ const state = {
   saved: false,
   busy: false,
   ticker: null,
+  // The safety net applies until boot has loaded the server's real values.
+  config: Config.fallback(new Error('The server timeouts have not loaded yet.')),
+  configReady: null,
 };
+
+function requestTiming(kind) {
+  return Config.channelFor(state.config, kind);
+}
+
+function timeoutMeta(meta, kind, includeImage = false) {
+  const timing = requestTiming(kind);
+  const enriched = { ...meta, timeout_ms: timing.serverMs, wait_ms: timing.waitMs };
+  if (includeImage) {
+    const image = requestTiming('image');
+    enriched.image_timeout_ms = image.serverMs;
+    enriched.image_wait_ms = image.waitMs;
+  }
+  return enriched;
+}
 
 const COPY = {
   estimate: {

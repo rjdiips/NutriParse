@@ -39,6 +39,18 @@ function paintInspector(parts, meta, payload) {
       ['items returned', count],
     ];
 
+  const timeoutText = (serverMs, waitMs) => (typeof serverMs === 'number'
+    ? `${fmt0(serverMs)} ms`
+    : `${fmt0(waitMs)} ms (fallback)`);
+
+  if (!meta.manual && typeof meta.wait_ms === 'number') {
+    fields.push(['timeout', timeoutText(meta.timeout_ms, meta.wait_ms)]);
+    fields.push(['client wait', `${fmt0(meta.wait_ms)} ms`]);
+  }
+  if (!meta.manual && typeof meta.image_wait_ms === 'number') {
+    fields.push(['image timeout', timeoutText(meta.image_timeout_ms, meta.image_wait_ms)]);
+  }
+
   const grid = document.createDocumentFragment();
   fields.forEach(([label, value]) => {
     const wrap = document.createElement('div');

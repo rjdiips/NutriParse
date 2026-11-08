@@ -19,6 +19,16 @@ class HealthResponse(BaseModel):
     status: str
 
 
+class RuntimeConfigResponse(BaseModel):
+    """Effective provider and per-feature timeouts the browser should wait for."""
+
+    provider: str
+    model: str
+    parse_timeout_ms: int
+    cook_timeout_ms: int
+    image_timeout_ms: int
+
+
 # --------------------------------------------------------------- requests
 
 

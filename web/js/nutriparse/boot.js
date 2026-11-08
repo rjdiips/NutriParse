@@ -26,8 +26,19 @@ async function boot() {
   setView(params.get('view') === 'journal' ? 'journal' : 'compose');
   updateCount();
 
+  // The journal does not depend on the model settings, so it renders at once;
+  // the request timeouts arrive a moment later from the server.
+  state.configReady = Config.load().then((config) => {
+    state.config = config;
+    if (config.source === 'fallback') {
+      el.configNoticeMsg.textContent = Config.describeFallback(config);
+      el.configNotice.hidden = false;
+    }
+  });
+
   await loadJournal();
   renderJournal();
+  await state.configReady;
 }
 
 boot();

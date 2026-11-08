@@ -2,6 +2,13 @@ const defaultData=()=>({calorie_goal:2000, entries:[]});
 /* The journal lives in the server's data.json (see journal-client.js), shared
    with the Compose page. `data` below is this page's copy of it. */
 let data=defaultData();
+/* Server-reported AI timeouts; the 300 s safety net applies until they load. */
+let timeoutConfig=null;
+let timeoutReady=Promise.resolve();
+function waitMillis(kind){
+  return Config.channelFor(timeoutConfig,kind).waitMs;
+}
+const configNotice=document.getElementById('configNotice');
 function applyData(doc){
   data={
     calorie_goal:(Number(doc&&doc.calorie_goal)||2000),
@@ -50,9 +57,10 @@ function activateTab(name){
 document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>activateTab(el.dataset.tab)));
 
 async function parseMealText(text){
+  await timeoutReady;
   const ctrl=new AbortController();
-  /* The server gives a local model 180 s (LLM_TIMEOUT); stop just after it. */
-  const tid=setTimeout(()=>ctrl.abort(),185000);
+  /* Wait the server's effective parse timeout plus 10 s so its error wins. */
+  const tid=setTimeout(()=>ctrl.abort(),waitMillis('parse'));
   try{
     const resp=await fetch('/api/parse', {
       method:'POST',
@@ -68,8 +76,9 @@ async function parseMealText(text){
 }
 
 async function conjureRecipes(ingredients, useSoon){
+  await timeoutReady;
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),750000);
+  const tid=setTimeout(()=>ctrl.abort(),waitMillis('cook'));
   try{
     const resp=await fetch('/api/leftover-alchemist',{
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -81,8 +90,9 @@ async function conjureRecipes(ingredients, useSoon){
 }
 
 async function conjureRecipeImage(recipe){
+  await timeoutReady;
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),300000);
+  const tid=setTimeout(()=>ctrl.abort(),waitMillis('image'));
   try{
     const resp=await fetch('/api/recipe-image',{
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -480,6 +490,8 @@ async function parseMeal(){
   const save=document.getElementById('saveParsedBtn');
   if(save){ save.disabled=true; save.textContent='Save to the record'; }
 
+  await timeoutReady;
+  const parseWaitMs=waitMillis('parse');
   try{
     const payload=await parseMealText(text);
     if(!payload||!Array.isArray(payload.items)||payload.items.length===0){
@@ -492,7 +504,7 @@ async function parseMeal(){
     parsedState.items=[];
     resetParsedTotals();
     const message=error.name==='AbortError'
-      ? 'No response after 185 seconds. The model may be slow or unreachable.'
+      ? `No response after ${Math.round(parseWaitMs/1000)} seconds. The model may be slow or unreachable.`
       : error.message;
     showParseError('Couldn’t itemise that: '+message);
     revealResult('Estimate unavailable · add a row by hand to continue.','Manual entry');
@@ -845,16 +857,31 @@ document.querySelectorAll('.meal-chip').forEach(c=>{
 
 function render(){ renderEntries(); renderSummary(); renderGoal(); }
 
-async function boot(){
-  try{
-    applyData(await JournalStore.read());
-    const claim=await JournalStore.claimBrowserEntries(data);
-    if(claim.document) applyData(claim.document);
-    if(claim.moved) toast(`Moved ${claim.moved} ${claim.moved===1?'entry':'entries'} from this browser to the server.`,'success');
-    if(claim.skipped) toast(`${claim.skipped} saved ${claim.skipped===1?'entry':'entries'} could not be read, so they were left in this browser.`,'error');
-  }catch(error){
-    toast('Could not reach the journal: '+error.message,'error');
+async function loadTimeouts(){
+  timeoutConfig=await Config.load();
+  if(timeoutConfig.source==='fallback'){
+    configNotice.textContent=Config.describeFallback(timeoutConfig);
+    configNotice.hidden=false;
   }
+}
+
+async function boot(){
+  const journalReady=(async()=>{
+    try{
+      applyData(await JournalStore.read());
+      const claim=await JournalStore.claimBrowserEntries(data);
+      if(claim.document) applyData(claim.document);
+      if(claim.moved) toast(`Moved ${claim.moved} ${claim.moved===1?'entry':'entries'} from this browser to the server.`,'success');
+      if(claim.skipped) toast(`${claim.skipped} saved ${claim.skipped===1?'entry':'entries'} could not be read, so they were left in this browser.`,'error');
+    }catch(error){
+      toast('Could not reach the journal: '+error.message,'error');
+    }
+  })();
+  /* Neither request can block the other: the journal renders as soon as its
+     document arrives, and the timeouts apply once the config call settles. */
+  timeoutReady=loadTimeouts();
+  await journalReady;
   render();
+  await timeoutReady;
 }
 boot();

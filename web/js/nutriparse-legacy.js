@@ -4,6 +4,7 @@
    it loads the shared core first, then the modules in the order they expect. */
 (function () {
   var files = [
+    '/assets/js/config-client.js',
     '/assets/js/nutriparse.js',
     '/assets/js/nutriparse/request.js',
     '/assets/js/nutriparse/estimate.js',

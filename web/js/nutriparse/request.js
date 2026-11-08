@@ -52,8 +52,12 @@ async function submit() {
     showSkeleton();
   }
 
+  // A very early click must use the server's values, not the safety net.
+  if (state.configReady) await state.configReady;
+
   const controller = new AbortController();
-  const timeout = mode === 'cook' ? COOK_TIMEOUT_MS : PARSE_TIMEOUT_MS;
+  const kind = mode === 'cook' ? 'cook' : 'parse';
+  const timeout = requestTiming(kind).waitMs;
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -88,7 +92,11 @@ async function submit() {
       state.cookRecipes = payload.recipes;
       state.isSample = false;
       state.cookReady = true;
-      renderRecipes(payload.recipes, payload.meta || {}, payload);
+      renderRecipes(
+        payload.recipes,
+        timeoutMeta(payload.meta || {}, 'cook', true),
+        payload,
+      );
       announce(`${payload.recipes.length} recipes ready.`);
       payload.recipes.forEach((recipe, index) => loadRecipeImage(recipe, index));
     } else {
@@ -97,7 +105,11 @@ async function submit() {
       }
       state.isSample = false;
       state.estimateReady = true;
-      renderItems(payload.items, payload.meta || {}, payload);
+      renderItems(
+        payload.items,
+        timeoutMeta(payload.meta || {}, 'parse'),
+        payload,
+      );
       announce(`Parsed ${payload.items.length} item${payload.items.length === 1 ? '' : 's'}.`);
     }
     syncPanels();

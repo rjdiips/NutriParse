@@ -179,11 +179,14 @@ async function loadRecipeImage(recipe, index) {
     return;
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTiming('image').waitMs);
   try {
     const response = await fetch(IMAGE_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: recipe.title, description: recipe.description }),
+      signal: controller.signal,
     });
     let body = null;
     try {
@@ -201,7 +204,11 @@ async function loadRecipeImage(recipe, index) {
     media.replaceChildren(img);
   } catch (err) {
     media.dataset.state = 'unavailable';
-    media.replaceChildren(mediaNote(err.status === 503 ? 'Images off' : 'No image'));
+    const note = err.name === 'AbortError' ? 'Image timed out'
+      : err.status === 503 ? 'Images off' : 'No image';
+    media.replaceChildren(mediaNote(note));
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -227,7 +234,12 @@ function seedFromRecipe(recipe, meta) {
   setMode('estimate');
   el.resultSub.textContent = `Seeded from “${recipe.title}” · 1 serving · review before saving`;
   paintRows();
-  paintInspector(estimateParts, meta || {}, { recipe });
+  // This panel reports the Cook call that produced the recipe, not an
+  // Estimate call, so its timeout rows do not belong here.
+  const recipeMeta = { ...(meta || {}) };
+  ['timeout_ms', 'wait_ms', 'image_timeout_ms', 'image_wait_ms']
+    .forEach((key) => { delete recipeMeta[key]; });
+  paintInspector(estimateParts, recipeMeta, { recipe });
   el.resultTitle.focus({ preventScroll: true });
   reveal(el.result);
   announce(`Added ${recipe.title} to the estimate table for review.`);

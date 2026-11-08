@@ -81,6 +81,13 @@
 
     <p id="status" class="sr-only" role="status" aria-live="polite"></p>
 
+    <div id="configNotice" class="alert" role="status" hidden>
+      <div class="alert__body">
+        <strong class="alert__title">Timeouts unavailable</strong>
+        <p class="alert__msg" id="configNoticeMsg"></p>
+      </div>
+    </div>
+
     <div id="error" class="alert" role="alert" hidden>
       <div class="alert__body">
         <strong class="alert__title" id="errorTitle">Parse failed</strong>
@@ -279,6 +286,7 @@
 </footer>
 
 <script src="/assets/js/journal-client.js"></script>
+<script src="/assets/js/config-client.js"></script>
 <script src="/assets/js/nutriparse.js"></script>
 <script src="/assets/js/nutriparse/request.js"></script>
 <script src="/assets/js/nutriparse/estimate.js"></script>
