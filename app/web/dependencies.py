@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 import uuid
+from pathlib import Path
 from typing import Awaitable, Callable
 from urllib.parse import urlsplit
 
@@ -79,6 +80,11 @@ def current_settings(request: Request) -> Settings:
 def http_transport(request: Request) -> ProviderTransport:
     """Return the shared client created by the application lifespan."""
     return request.app.state.transport
+
+
+def image_cache_dir(request: Request) -> Path:
+    """Return the content-addressed recipe-image cache directory."""
+    return request.app.state.image_cache_dir
 
 
 async def _watch_for_disconnect(request: Request):

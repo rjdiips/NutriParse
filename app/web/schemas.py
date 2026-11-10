@@ -149,3 +149,4 @@ class RecipeResponse(BaseModel):
 
 class ImageResponse(BaseModel):
     image: str
+    cached: bool = False

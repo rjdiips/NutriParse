@@ -138,6 +138,8 @@ Turbo checkpoints expect CFG 1 and few sampling steps; the start script passes b
 
 The image service is optional: if it is stopped, recipe ideas still load without images. Set `LOCAL_IMAGE_GENERATION_ENABLED=false` in `.env` to disable image requests entirely, or override `LOCAL_IMAGE_API_URL` to use another address.
 
+Generated PNGs are written once under a SHA-256 hash of the normalized prompt, width, height, and steps, and reused by later Cook runs for the same recipe and settings. `POST /api/recipe-image` answers with a small body — `{"image": "/api/recipe-image/<hash>.png", "cached": false}` — and the image route serves the PNG with `Cache-Control: public, max-age=31536000, immutable`, because a content hash never changes. Both Compose and the Food Journal render that URL. Files live in `image-cache/`, which is ignored by Git; there is no automatic eviction, so delete that directory while the server is stopped to clear the cache.
+
 ## AI suggestions setup
 
 AI nutrition suggestions require an OpenRouter API key. The key is read by the backend from `.env` — never exposed to the browser or end user.
@@ -279,7 +281,7 @@ path, and image data and API credentials are never logged. Each log rotates at
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the `/api/config` timeouts and headers, and the rules that trim and validate model output. The async transport is tested with a stubbed `httpx.MockTransport` for 429/5xx retries, the stated backoff, no retry on other 4xx, the three-model and one-image concurrency caps, and disconnect cancellation. The browser config loader's client-side waits and 300-second fallback run under Node's built-in test runner; that test skips only when Node is not installed.
+The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the `/api/config` timeouts and headers, and the rules that trim and validate model output. The async transport is tested with a stubbed `httpx.MockTransport` for 429/5xx retries, the stated backoff, no retry on other 4xx, the three-model and one-image concurrency caps, and disconnect cancellation. The recipe-image cache is tested for its first write, repeat hits, dimension-aware hashes, immutable response headers, and unknown hashes. The browser config loader's client-side waits and 300-second fallback run under Node's built-in test runner; that test skips only when Node is not installed.
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -341,6 +343,7 @@ screenshots/           the screenshots used in this README
 requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings, httpx)
 requirements-dev.txt   installs the runtime requirements for the test suite
 data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
+image-cache/           generated recipe PNGs keyed by content hash (ignored by Git; delete to clear)
 .env                   your OpenRouter API key (create from `.env.example`; do not commit)
 .image-tools/, models/ downloaded image runtime and models (ignored by Git)
 .llm-tools/            downloaded llama.cpp runtime (ignored by Git)

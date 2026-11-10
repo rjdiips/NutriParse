@@ -9,7 +9,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 
-from .config import HOST, PORT, SettingsProvider
+from .config import HOST, IMAGE_CACHE_DIR, PORT, SettingsProvider
 from .journal import store
 from .logging_config import configure_logging
 from .services.transport import RETRY_DELAYS, ProviderTransport
@@ -35,6 +35,7 @@ def create_app(
     *,
     settings_provider: SettingsProvider | None = None,
     store_path: Path | None = None,
+    image_cache_dir: Path | None = None,
     http_transport: httpx.AsyncBaseTransport | None = None,
     retry_delays=None,
 ) -> FastAPI:
@@ -48,6 +49,7 @@ def create_app(
     # Fail at startup with a clear message rather than mid-request.
     application.state.settings_provider.current()
     application.state.store_path = store_path or store.DEFAULT_PATH
+    application.state.image_cache_dir = Path(image_cache_dir or IMAGE_CACHE_DIR)
     # Tests inject a stubbed transport; production uses a real one.
     application.state.http_transport = http_transport
     application.state.retry_delays = (

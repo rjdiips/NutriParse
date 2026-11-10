@@ -1,6 +1,7 @@
 .image-tools/
 .llm-tools/
 models/
+image-cache/
 __pycache__/
 .env
 logs/

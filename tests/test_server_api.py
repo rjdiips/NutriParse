@@ -21,6 +21,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\ncached recipe image"
+IMAGE_URL_REGEX = r"^/api/recipe-image/[0-9a-f]{64}\.png$"
+
 try:
     import httpx
     from fastapi.testclient import TestClient
@@ -59,10 +62,12 @@ class ApiTestCase(unittest.TestCase):
         self.root = Path(self._tmp.name)
         self.env_file = self.root / ".env"
         self.env_file.write_text("", encoding="utf-8")
+        self.image_cache_dir = self.root / "image-cache"
         self.settings_provider = SettingsProvider(self.env_file)
         self.app = create_app(
             settings_provider=self.settings_provider,
             store_path=self.root / "data.json",
+            image_cache_dir=self.image_cache_dir,
             http_transport=self.http_transport,
             retry_delays=self.retry_delays,
         )
@@ -471,7 +476,7 @@ class TestResponseModels(ApiTestCase):
         self.addCleanup(setattr, images, "generate_local_recipe_image", original)
 
         async def image_stub(recipe, endpoint, settings, transport):
-            return "data:image/png;base64,AAAA"
+            return PNG_BYTES
 
         images.generate_local_recipe_image = image_stub
         self.set_settings(
@@ -482,7 +487,121 @@ class TestResponseModels(ApiTestCase):
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["image"], "data:image/png;base64,AAAA")
+        body = response.json()
+        self.assertRegex(body["image"], IMAGE_URL_REGEX)
+        self.assertFalse(body["cached"])
+        self.assertNotIn("base64", response.text)
+
+
+class TestRecipeImageCache(ApiTestCase):
+    """Generated images live once under a content hash and are served by URL."""
+
+    def setUp(self):
+        super().setUp()
+        self.generated = 0
+        original = images.generate_local_recipe_image
+        self.addCleanup(setattr, images, "generate_local_recipe_image", original)
+
+        async def image_stub(recipe, endpoint, settings, transport):
+            self.generated += 1
+            return PNG_BYTES
+
+        images.generate_local_recipe_image = image_stub
+        self.enable_images()
+
+    def post_image(self, title="Dal", description="A bowl"):
+        return self.client.post(
+            "/api/recipe-image", json={"title": title, "description": description}
+        )
+
+    def enable_images(self, **overrides):
+        self.set_settings(
+            local_image_generation_enabled=True,
+            local_image_api_url="http://127.0.0.1:7860/sdapi/v1/txt2img",
+            **overrides,
+        )
+
+    def stored_path(self, url):
+        return self.image_cache_dir / url.rsplit("/", 1)[-1]
+
+    def test_first_request_stores_the_png_and_returns_a_url(self):
+        response = self.post_image()
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        self.assertEqual(set(body), {"image", "cached"})
+        self.assertFalse(body["cached"])
+        self.assertRegex(body["image"], IMAGE_URL_REGEX)
+        self.assertNotIn("base64", response.text)
+        self.assertEqual(self.stored_path(body["image"]).read_bytes(), PNG_BYTES)
+
+    def test_the_url_serves_the_png_with_an_immutable_cache_header(self):
+        url = self.post_image().json()["image"]
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, PNG_BYTES)
+        self.assertEqual(response.headers["content-type"], "image/png")
+        self.assertEqual(
+            response.headers["cache-control"],
+            "public, max-age=31536000, immutable",
+        )
+
+    def test_a_repeat_request_reuses_the_stored_image(self):
+        first = self.post_image().json()
+        second = self.post_image().json()
+
+        self.assertFalse(first["cached"])
+        self.assertTrue(second["cached"])
+        self.assertEqual(second["image"], first["image"])
+        self.assertEqual(self.generated, 1)
+
+    def test_whitespace_around_the_recipe_does_not_change_the_hash(self):
+        first = self.post_image(title="Dal", description="A bowl").json()
+        second = self.post_image(title="  Dal  ", description=" A   bowl ").json()
+
+        self.assertEqual(second["image"], first["image"])
+        self.assertTrue(second["cached"])
+        self.assertEqual(self.generated, 1)
+
+    def test_dimensions_and_steps_are_part_of_the_hash(self):
+        first = self.post_image().json()["image"]
+        self.enable_images(local_image_width=320)
+        second = self.post_image().json()
+        self.enable_images(local_image_height=240)
+        third = self.post_image().json()
+        self.enable_images(local_image_steps=9)
+        fourth = self.post_image().json()
+
+        self.assertEqual(
+            len({first, second["image"], third["image"], fourth["image"]}), 4
+        )
+        self.assertFalse(second["cached"])
+        self.assertFalse(third["cached"])
+        self.assertFalse(fourth["cached"])
+        self.assertEqual(self.generated, 4)
+
+    def test_an_unknown_hash_is_404(self):
+        response = self.client.get(f"/api/recipe-image/{'0' * 64}.png")
+
+        self.assert_error(response, 404, "Recipe image was not found")
+
+    def test_disabled_generation_is_503_even_when_an_image_is_cached(self):
+        self.post_image()
+        self.set_settings(local_image_generation_enabled=False)
+
+        response = self.post_image()
+
+        self.assert_error(response, 503, "Local image generation is disabled")
+        self.assertEqual(self.generated, 1)
+
+    def test_storing_the_same_hash_again_keeps_the_first_bytes(self):
+        images.store_recipe_image(self.image_cache_dir, "a" * 64, b"first image")
+        images.store_recipe_image(self.image_cache_dir, "a" * 64, b"second image")
+
+        stored = images.recipe_image_path(self.image_cache_dir, "a" * 64)
+        self.assertEqual(stored.read_bytes(), b"first image")
 
 
 class TestAiAndImages(ApiTestCase):
@@ -587,7 +706,7 @@ class TestProviderTransport(ApiTestCase):
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()["image"].startswith("data:image/png;base64,"))
+        self.assertRegex(response.json()["image"], IMAGE_URL_REGEX)
         self.assertEqual(self.calls, 2)
 
     def test_image_fails_after_three_attempts(self):

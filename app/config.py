@@ -35,6 +35,8 @@ ENV_FILE = BASE_DIR / ".env"
 LOG_DIR = BASE_DIR / "logs"
 LOG_FILE = LOG_DIR / "llm.log"
 IMAGE_LOG_FILE = LOG_DIR / "image_generation.log"
+# Content-addressed recipe images. Gitignored; delete the directory to clear it.
+IMAGE_CACHE_DIR = BASE_DIR / "image-cache"
 
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_TEXT_LENGTH = 500
