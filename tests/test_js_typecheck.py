@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The browser JavaScript type-check stays green.
 
-The frontend is plain classic JavaScript, so a misspelled shared global fails at
-runtime rather than at build time. This test runs ``npm run check:js`` and skips
-when the dev-only Node tooling has not been installed.
+The frontend has no build step, so a misspelled import or browser global fails
+at runtime rather than at build time. This test runs ``npm run check:js`` and
+skips when the dev-only Node tooling has not been installed.
 """
 
 import os

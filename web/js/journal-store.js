@@ -3,9 +3,13 @@
    them keeps its own copy. The server owns data.json; every call here returns
    the whole document the server just saved.
 
-   This is the ES-module interface. Compose imports the named exports below;
-   Food Journal still loads journal-client.js, a classic-script shim that
-   forwards its window.JournalStore calls here. */
+   Both pages import the named exports below. journal-client.js remains only as
+   a classic-script shim for pages built before this module existed. */
+
+/** @typedef {{id?: string, name?: string, portion?: string, calories?: number,
+ *   protein?: number, carbs?: number, fat?: number, meal?: string, date?: string}} JournalEntry */
+/** @typedef {{calorie_goal: number, entries: JournalEntry[]}} JournalDocument */
+/** @typedef {{moved: number, skipped: number, document: JournalDocument|null}} JournalClaim */
 
 const ENDPOINT = '/api/journal';
 const LEGACY_KEY = 'ct_data';

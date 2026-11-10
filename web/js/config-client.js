@@ -6,6 +6,8 @@
    If the config call fails, the page keeps working with a generous safety net. */
 
 (function (global) {
+  /** @typedef {import('./config-module.js').ClientConfig} ClientConfig */
+
   const ENDPOINT = '/api/config';
   const MARGIN_MS = 10000;
   const FALLBACK_MS = 300000;

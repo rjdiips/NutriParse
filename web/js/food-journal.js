@@ -1,6 +1,14 @@
+/* Food Journal's module entry point. It imports the same journal store and
+   config client as Compose, so neither page relies on the classic globals. */
+
+import { Config } from './config-module.js';
+import {
+  read, addEntries, updateEntries, removeEntry, setGoal, claimBrowserEntries,
+} from './journal-store.js';
+
 const defaultData=()=>({calorie_goal:2000, entries:[]});
-/* The journal lives in the server's data.json (see journal-client.js), shared
-   with the Compose page. `data` below is this page's copy of it. */
+/* The journal lives in the server's data.json, shared with the Compose page.
+   `data` below is this page's copy of it. */
 let data=defaultData();
 /* Server-reported AI timeouts; the 300 s safety net applies until they load. */
 let timeoutConfig=null;
@@ -9,6 +17,7 @@ function waitMillis(kind){
   return Config.channelFor(timeoutConfig,kind).waitMs;
 }
 const configNotice=document.getElementById('configNotice');
+/** @param {import('./journal-store.js').JournalDocument} doc */
 function applyData(doc){
   data={
     calorie_goal:(Number(doc&&doc.calorie_goal)||2000),
@@ -272,13 +281,14 @@ document.getElementById('conjureBtn').addEventListener('click',async()=>{
   }finally{ btn.disabled=false; btn.textContent='Create a meal'; }
 });
 
+let toastTid=0;
 function toast(msg,kind='success'){
   const t=document.getElementById('toast');
   if(!t) return;
   t.textContent=msg;
   t.className='toast show '+(kind==='error'?'error':'success');
-  clearTimeout(window.__toastTid);
-  window.__toastTid=setTimeout(()=>{ t.classList.remove('show'); }, 2500);
+  clearTimeout(toastTid);
+  toastTid=setTimeout(()=>{ t.classList.remove('show'); }, 2500);
 }
 
 /* ---------- compose: describe a meal, review the items, save ---------- */
@@ -567,8 +577,8 @@ async function saveParsed(){
   saveBtn.innerHTML='<span class="spinner"></span>Saving…';
   try{
     applyData(editing
-      ? await JournalStore.updateEntries(editId,entries)
-      : await JournalStore.addEntries(entries));
+      ? await updateEntries(editId,entries)
+      : await addEntries(entries));
   }catch(error){
     saveBtn.disabled=false;
     saveBtn.textContent=editing?'Save changes':'Save to the record';
@@ -700,7 +710,7 @@ async function deleteEntry(id){
   if(!entry) return;
   if(!confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
   try{
-    applyData(await JournalStore.removeEntry(id));
+    applyData(await removeEntry(id));
   }catch(error){
     toast('Could not delete: '+error.message,'error');
     return;
@@ -827,7 +837,7 @@ document.getElementById('saveGoal').addEventListener('click', async ()=>{
   clearInlineErrors();
   if(isNaN(g)||g<1){ showInlineError(goalInput,'Value must be at least 1.'); goalInput.focus(); return; }
   try{
-    applyData(await JournalStore.setGoal(Math.round(g)));
+    applyData(await setGoal(Math.round(g)));
   }catch(error){
     toast('Could not save the goal: '+error.message,'error');
     return;
@@ -868,8 +878,8 @@ async function loadTimeouts(){
 async function boot(){
   const journalReady=(async()=>{
     try{
-      applyData(await JournalStore.read());
-      const claim=await JournalStore.claimBrowserEntries(data);
+      applyData(await read());
+      const claim=await claimBrowserEntries(data);
       if(claim.document) applyData(claim.document);
       if(claim.moved) toast(`Moved ${claim.moved} ${claim.moved===1?'entry':'entries'} from this browser to the server.`,'success');
       if(claim.skipped) toast(`${claim.skipped} saved ${claim.skipped===1?'entry':'entries'} could not be read, so they were left in this browser.`,'error');

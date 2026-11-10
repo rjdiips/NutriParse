@@ -300,9 +300,9 @@ npm ci
 npm run check:js
 ```
 
-`npm ci` installs the committed `package-lock.json`. Compose loads one native ES-module graph rooted at `web/js/nutriparse/boot.js`; Food Journal still loads classic scripts for now. The check runs each page as its own program, because the two pages never share a module graph. `web/js/shared-globals.d.ts` declares the names the classic Food Journal scripts share across files — `Config`, `JournalStore`, and `window.__toastTid` — along with the document types they exchange, so the check can tell a real typo from a cross-file reference. The Node packages are dev-only; the Python runtime and the served pages are unaffected. `python -m unittest discover -s tests` runs the check when `npm ci` has installed the tooling, and skips it otherwise.
+`npm ci` installs the committed `package-lock.json`. Both pages load one native ES-module graph each: Compose from `web/js/nutriparse/boot.js` and Food Journal from `web/js/food-journal.js`. Both import the shared journal store directly; `config-module.js` is the module interface to the classic config client. The check runs each page as its own program, because the two pages never share a module graph, and it also covers the compatibility shim. The modules declare their own JSDoc types, so there is no ambient declaration file and the check only relies on the standard browser globals. The Node packages are dev-only; the Python runtime and the served pages are unaffected. `python -m unittest discover -s tests` runs the check when `npm ci` has installed the tooling, and skips it otherwise.
 
-`tests/test_assets.py` also resolves every relative ES-module import to a real file, since the browser has no bundler to fail on a broken path. The 10 November 2026 smoke check of Compose used a headless Edge run against a temporary journal: sample Estimate and Cook views, manual row save, Journal view, search match and no-match states, goal editing, entry deletion, and a clean browser console. Food Journal was checked in the same run and loaded through its classic client unchanged.
+`tests/test_assets.py` also resolves every relative ES-module import to a real file, since the browser has no bundler to fail on a broken path. The 10 November 2026 smoke check used a headless Edge run against a temporary journal: Compose's sample Estimate and Cook views, manual row save, Journal view, search match and no-match states, goal editing, and entry deletion; Food Journal loaded as a module and covered summary rendering, browser-data migration, adding an entry, deleting it, goal editing, search, and day history. Both runs left a clean browser console.
 
 ## Model evaluation
 
@@ -343,12 +343,11 @@ web/
   css/food-journal/    base, layout, compose, journal, responsive
   js/nutriparse.js     Compose module: DOM refs, state, copy, mode and view switches
   js/nutriparse/       boot entry plus request, estimate, recipes, inspector, journal, samples
-  js/food-journal.js   the second page's behaviour (classic script)
-  js/journal-store.js  shared journal API as ES modules; Compose imports it
-  js/journal-client.js classic-script shim that forwards window.JournalStore to journal-store.js
-  js/config-client.js  server-driven AI timeouts shared by both pages
+  js/food-journal.js   Food Journal module entry: today, compose, history, goal, alchemist
+  js/journal-store.js  shared journal API as ES modules; both pages import it
+  js/journal-client.js compatibility-only classic shim for the old /journal-client.js URL
+  js/config-client.js  server-driven AI timeouts, kept as a classic script for the Node test
   js/config-module.js  ES-module interface to config-client.js
-  js/shared-globals.d.ts  declarations for the globals the classic scripts share
   assets/              favicon files
 scripts/
   seed_demo.py         writes data.demo.json for screenshots
@@ -374,5 +373,7 @@ image-cache/           generated recipe PNGs keyed by content hash (ignored by G
 The public asset URLs are stable: pages still load at `/` and
 `/food-journal.html`, and the older `/nutriparse.js`, `/nutriparse.css`,
 `/journal-client.js`, and `/food-journal.css` URLs remain as compatibility
-aliases. New files are served from `/assets/`, which mounts only `web/`; source,
-`.env`, and journals stay outside the reachable tree.
+aliases. `/journal-client.js` is compatibility-only: the current pages import
+`web/js/journal-store.js` directly, and the shim exists for pages built before
+the module split. New files are served from `/assets/`, which mounts only `web/`;
+source, `.env`, and journals stay outside the reachable tree.

@@ -70,15 +70,39 @@ class TestComposeModuleGraph(unittest.TestCase):
                 self.assertNotIn("JournalStore", source)
                 self.assertNotIn("window.Config", source)
 
-    def test_food_journal_keeps_the_classic_journal_client(self):
+
+class TestFoodJournalModuleGraph(unittest.TestCase):
+    def test_food_journal_page_loads_one_module_entry(self):
         page = (WEB_DIR / "pages" / "food-journal.html").read_text(encoding="utf-8")
+        scripts = SCRIPT_TAG.findall(page)
+
+        self.assertEqual(len(scripts), 1, "Food Journal should load one entry script")
+        self.assertIn('type="module"', scripts[0])
+        self.assertIn('src="/assets/js/food-journal.js"', scripts[0])
+        self.assertNotIn("journal-client.js", page)
+
+    def test_food_journal_imports_the_shared_clients(self):
+        source = (WEB_DIR / "js" / "food-journal.js").read_text(encoding="utf-8")
+
+        self.assertIn("from './journal-store.js'", source)
+        self.assertIn("from './config-module.js'", source)
+        self.assertNotIn("JournalStore", source)
+        self.assertNotIn("window.Config", source)
+
+    def test_no_shared_global_declaration_remains(self):
+        self.assertFalse((WEB_DIR / "js" / "shared-globals.d.ts").exists())
+        for name in ("tsconfig.json", "tsconfig.food-journal.json"):
+            config = (REPO_ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(config=name):
+                self.assertNotIn("shared-globals", config)
+
+    def test_legacy_journal_client_stays_a_classic_compatibility_shim(self):
         client = (WEB_DIR / "js" / "journal-client.js").read_text(encoding="utf-8")
 
-        self.assertIn('<script src="/assets/js/journal-client.js"></script>', page)
-        self.assertNotIn('<script type="module"', page)
         self.assertNotRegex(client, r"(?m)^\s*export\b")
-        self.assertIn("global.JournalStore", client)
-
+        self.assertIn("JournalStore: {", client)
+        for name in ("read", "addEntries", "updateEntries", "removeEntry", "setGoal", "claimBrowserEntries"):
+            self.assertIn(f"{name}: forward('{name}')", client)
 
 
 if __name__ == "__main__":
