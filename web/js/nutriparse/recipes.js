@@ -1,6 +1,13 @@
 /* ---------- recipes ---------- */
 
-function skeletonCards(count) {
+import {
+  el, state, num, fmt0, fmt1, setMode, setView, announce, hideError,
+  requestTiming, IMAGE_ENDPOINT, reveal, estimateParts, cookParts,
+} from '../nutriparse.js';
+import { paintInspector } from './inspector.js';
+import { paintRows, renderItems } from './estimate.js';
+
+export function skeletonCards(count) {
   const cards = document.createDocumentFragment();
   for (let i = 0; i < count; i += 1) {
     const card = document.createElement('div');
@@ -22,7 +29,7 @@ function skeletonCards(count) {
   return cards;
 }
 
-function renderRecipes(recipes, meta, payload) {
+export function renderRecipes(recipes, meta, payload) {
   state.isSample = Boolean(meta && meta.sample);
   el.cookResult.hidden = false;
   el.empty.hidden = true;
@@ -165,11 +172,11 @@ function paintStepsOverflow(steps) {
   wrap.dataset.overflow = more ? 'more' : 'end';
 }
 
-function repaintStepsOverflow() {
+export function repaintStepsOverflow() {
   el.recipeGrid.querySelectorAll('.recipe__steps').forEach(paintStepsOverflow);
 }
 
-async function loadRecipeImage(recipe, index) {
+export async function loadRecipeImage(recipe, index) {
   const media = /** @type {HTMLElement | null} */ (el.recipeGrid.querySelector(`[data-recipe-index="${index}"] .recipe__media`));
   if (!media) return;
 
@@ -267,3 +274,5 @@ function startManualRow() {
   announce('Blank row added. Type a name and the numbers, then save.');
 }
 
+el.manual.addEventListener('click', startManualRow);
+el.journalAdd.addEventListener('click', startManualRow);

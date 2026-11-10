@@ -4,6 +4,7 @@
     "web/js/shared-globals.d.ts",
     "web/js/config-client.js",
     "web/js/journal-client.js",
+    "web/js/journal-store.js",
     "web/js/food-journal.js"
   ]
 }

@@ -1,15 +1,17 @@
 /* ---------- inspector ---------- */
 
+import { fmt0, estimateParts, cookParts } from '../nutriparse.js';
+
 /* A request in flight has no call detail yet. Clear the last one so a panel
    reopened during the wait cannot present stale numbers as the new result. */
-function clearCallDetail(parts) {
+export function clearCallDetail(parts) {
   parts.chips.replaceChildren();
   parts.grid.replaceChildren();
   parts.raw.textContent = 'Waiting for the model…';
   parts.copy.textContent = 'Copy';
 }
 
-function paintInspector(parts, meta, payload) {
+export function paintInspector(parts, meta, payload) {
   const chips = [];
   const chip = (label, modifier) => {
     const span = document.createElement('span');
@@ -81,4 +83,3 @@ function wireCopy(parts) {
 
 wireCopy(estimateParts);
 wireCopy(cookParts);
-

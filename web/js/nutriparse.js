@@ -1,13 +1,19 @@
 /* NutriParse — Compose and Journal
    Two intents, one surface: Estimate turns a meal into editable rows, Cook
    turns ingredients into recipe cards. Both expose the same call detail.
-   Journal is the read side: what has been saved, against the daily goal. */
+   Journal is the read side: what has been saved, against the daily goal.
 
-const PARSE_ENDPOINT = '/api/parse';
-const COOK_ENDPOINT = '/api/leftover-alchemist';
-const IMAGE_ENDPOINT = '/api/recipe-image';
+   This file is the shared core of the Compose page's module graph: DOM refs,
+   state, copy, formatting, and the mode/view switches. boot.js is the entry
+   point; the picker modules import these names explicitly. */
 
-const el = {
+import { Config } from './config-module.js';
+
+export const PARSE_ENDPOINT = '/api/parse';
+export const COOK_ENDPOINT = '/api/leftover-alchemist';
+export const IMAGE_ENDPOINT = '/api/recipe-image';
+
+export const el = {
   text: /** @type {HTMLTextAreaElement} */ (document.getElementById('mealText')),
   count: document.getElementById('charCount'),
   parse: /** @type {HTMLButtonElement} */ (document.getElementById('parseBtn')),
@@ -76,7 +82,7 @@ const el = {
   journalEmptyText: document.getElementById('journalEmptyText'),
 };
 
-const estimateParts = {
+export const estimateParts = {
   inspector: el.inspector,
   chips: document.getElementById('inspectorChips'),
   grid: document.getElementById('inspectorGrid'),
@@ -84,7 +90,7 @@ const estimateParts = {
   copy: document.getElementById('copyBtn'),
 };
 
-const cookParts = {
+export const cookParts = {
   inspector: el.cookInspector,
   chips: document.getElementById('cookChips'),
   grid: document.getElementById('cookGrid'),
@@ -92,7 +98,7 @@ const cookParts = {
   copy: document.getElementById('cookCopyBtn'),
 };
 
-const state = {
+export const state = {
   view: 'compose',
   mode: 'estimate',
   items: [],
@@ -109,11 +115,11 @@ const state = {
   configReady: null,
 };
 
-function requestTiming(kind) {
+export function requestTiming(kind) {
   return Config.channelFor(state.config, kind);
 }
 
-function timeoutMeta(meta, kind, includeImage = false) {
+export function timeoutMeta(meta, kind, includeImage = false) {
   const timing = requestTiming(kind);
   const enriched = { ...meta, timeout_ms: timing.serverMs, wait_ms: timing.waitMs };
   if (includeImage) {
@@ -124,7 +130,7 @@ function timeoutMeta(meta, kind, includeImage = false) {
   return enriched;
 }
 
-const COPY = {
+export const COPY = {
   estimate: {
     label: 'Describe what you ate',
     sub: 'One line is enough. The model splits it into items, and every number stays editable.',
@@ -147,15 +153,15 @@ const COPY = {
   },
 };
 
-const fmt0 = (n) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Number(n) || 0);
-const fmt1 = (n) => {
+export const fmt0 = (n) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Number(n) || 0);
+export const fmt1 = (n) => {
   const v = Math.round((Number(n) || 0) * 10) / 10;
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(v);
 };
-const num = (n) => Math.max(0, Number(n) || 0);
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+export const num = (n) => Math.max(0, Number(n) || 0);
+export const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
-function localDateISO(date = new Date()) {
+export function localDateISO(date = new Date()) {
   const pad = (v) => String(v).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
@@ -170,15 +176,15 @@ function addDaysISO(offset) {
   return localDateISO(d);
 }
 
-function longDate(iso) {
+export function longDate(iso) {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(isoToDate(iso));
 }
 
-function shortDate(iso) {
+export function shortDate(iso) {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(isoToDate(iso));
 }
 
-function dayLabel(iso) {
+export function dayLabel(iso) {
   if (iso === localDateISO()) return 'Today';
   if (iso === addDaysISO(-1)) return 'Yesterday';
   return new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(isoToDate(iso));
@@ -186,20 +192,20 @@ function dayLabel(iso) {
 
 /* Only move the page when the target is actually out of view, so loading a
    sample or a short result does not scroll the header away. */
-function reveal(node) {
+export function reveal(node) {
   const rect = node.getBoundingClientRect();
   if (rect.top < 0 || rect.top > window.innerHeight - 120) {
     node.scrollIntoView({ block: 'start' });
   }
 }
 
-function announce(message) {
+export function announce(message) {
   el.status.textContent = message;
 }
 
 /* ---------- mode ---------- */
 
-function setMode(mode) {
+export function setMode(mode) {
   state.mode = mode;
   const copy = COPY[mode];
 
@@ -224,7 +230,7 @@ function setMode(mode) {
   syncPanels();
 }
 
-function syncPanels() {
+export function syncPanels() {
   const showEstimate = state.mode === 'estimate' && state.estimateReady;
   const showCook = state.mode === 'cook' && state.cookReady;
   el.result.hidden = !showEstimate;
@@ -244,7 +250,15 @@ function syncPanels() {
 
 const VIEW_TITLES = { compose: 'NutriParse — Compose', journal: 'NutriParse — Journal' };
 
-function setView(view) {
+/* The Journal view lives in its own module, so it registers the renderer here
+   rather than the core importing it back (which would make a cycle). */
+let journalRenderer = () => {};
+/** @param {() => void} render */
+export function registerJournalRenderer(render) {
+  journalRenderer = render;
+}
+
+export function setView(view) {
   state.view = view;
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.viewtab')).forEach((button) => {
     const active = button.dataset.view === view;
@@ -254,7 +268,7 @@ function setView(view) {
   el.viewCompose.hidden = view !== 'compose';
   el.viewJournal.hidden = view !== 'journal';
   document.title = VIEW_TITLES[view] || 'NutriParse';
-  if (view === 'journal') renderJournal();
+  if (view === 'journal') journalRenderer();
 }
 
 /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.viewtab')).forEach((button) => {
@@ -265,12 +279,9 @@ function setView(view) {
   });
 });
 
-el.manual.addEventListener('click', startManualRow);
-el.journalAdd.addEventListener('click', startManualRow);
-
 /* ---------- composer ---------- */
 
-function updateCount() {
+export function updateCount() {
   el.count.textContent = String(el.text.value.length);
 }
 
@@ -287,14 +298,16 @@ el.text.addEventListener('input', () => {
   });
 });
 
-el.text.addEventListener('keydown', (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-    event.preventDefault();
-    submit();
-  }
-});
+/* ---------- errors ---------- */
 
-el.parse.addEventListener('click', submit);
-el.retry.addEventListener('click', submit);
-el.sample.addEventListener('click', () => showSample(state.mode));
+export function showError(title, message, offerSample) {
+  el.errorTitle.textContent = title;
+  el.errorMsg.textContent = message;
+  el.sample.hidden = !offerSample;
+  el.error.hidden = false;
+  el.error.scrollIntoView({ block: 'nearest' });
+}
 
+export function hideError() {
+  el.error.hidden = true;
+}

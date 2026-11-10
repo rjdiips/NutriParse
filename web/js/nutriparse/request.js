@@ -1,5 +1,14 @@
 /* ---------- request ---------- */
 
+import {
+  el, state, COPY, requestTiming, timeoutMeta, syncPanels, announce,
+  showError, hideError, PARSE_ENDPOINT, COOK_ENDPOINT, cookParts,
+} from '../nutriparse.js';
+import { clearCallDetail } from './inspector.js';
+import { showSkeleton, resetTotals, renderItems } from './estimate.js';
+import { renderRecipes, skeletonCards, loadRecipeImage } from './recipes.js';
+import { showSample } from './samples.js';
+
 function setBusy(busy, mode = state.mode) {
   state.busy = busy;
   el.parse.disabled = busy;
@@ -155,17 +164,13 @@ function startTicker(update) {
   state.ticker = setInterval(update, 1000);
 }
 
-/* ---------- errors ---------- */
+el.text.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault();
+    submit();
+  }
+});
 
-function showError(title, message, offerSample) {
-  el.errorTitle.textContent = title;
-  el.errorMsg.textContent = message;
-  el.sample.hidden = !offerSample;
-  el.error.hidden = false;
-  el.error.scrollIntoView({ block: 'nearest' });
-}
-
-function hideError() {
-  el.error.hidden = true;
-}
-
+el.parse.addEventListener('click', submit);
+el.retry.addEventListener('click', submit);
+el.sample.addEventListener('click', () => showSample(state.mode));

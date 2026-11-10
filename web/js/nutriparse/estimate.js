@@ -1,6 +1,11 @@
 /* ---------- estimate rows ---------- */
 
-function showSkeleton() {
+import {
+  el, estimateParts, state, num, fmt0, fmt1, reveal, syncPanels,
+} from '../nutriparse.js';
+import { clearCallDetail, paintInspector } from './inspector.js';
+
+export function showSkeleton() {
   el.rows.replaceChildren();
   const skeleton = document.createElement('div');
   skeleton.className = 'skeleton';
@@ -26,7 +31,7 @@ function showSkeleton() {
   el.inspectorRawLabel.textContent = 'Response JSON';
 }
 
-function resetTotals() {
+export function resetTotals() {
   [el.totalCalories, el.totalProtein, el.totalCarbs, el.totalFat]
     .forEach((node) => { node.textContent = '—'; });
   el.totalsNote.textContent = '';
@@ -35,7 +40,7 @@ function resetTotals() {
   el.macrobar.removeAttribute('aria-label');
 }
 
-function renderItems(items, meta, payload, opts = {}) {
+export function renderItems(items, meta, payload, opts = {}) {
   state.items = items.map((item) => ({ ...item }));
   state.saved = false;
   state.isSample = Boolean(meta && meta.sample);
@@ -59,7 +64,7 @@ function renderItems(items, meta, payload, opts = {}) {
   reveal(el.result);
 }
 
-function paintRows() {
+export function paintRows() {
   const host = document.createDocumentFragment();
   state.items.forEach((item, index) => host.appendChild(buildRow(item, index)));
   el.rows.replaceChildren(host);
@@ -187,4 +192,3 @@ function markDirty() {
     el.save.textContent = 'Save to journal';
   }
 }
-

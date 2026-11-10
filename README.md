@@ -293,14 +293,16 @@ Both browser surfaces are also exercised with headless-browser runs of the Compo
 
 ### JavaScript type check
 
-The browser code is plain classic JavaScript, so a misspelled shared global is a runtime error rather than a build error. TypeScript's `checkJs` mode closes that gap without adding a bundler or a build step.
+The browser code has no build step, so a misspelled import or shared global is a runtime error rather than a build error. TypeScript's `checkJs` mode closes that gap without adding a bundler.
 
 ```powershell
 npm ci
 npm run check:js
 ```
 
-`npm ci` installs the committed `package-lock.json`. The check runs each page as its own program, because the Compose page and the Food Journal never share a global scope. `web/js/shared-globals.d.ts` declares the names the classic scripts share across files — `Config`, `JournalStore`, and `window.__toastTid` — along with the document types they exchange, so the check can tell a real typo from a cross-file reference. The Node packages are dev-only; the Python runtime and the served pages are unaffected. `python -m unittest discover -s tests` runs the check when `npm ci` has installed the tooling, and skips it otherwise.
+`npm ci` installs the committed `package-lock.json`. Compose loads one native ES-module graph rooted at `web/js/nutriparse/boot.js`; Food Journal still loads classic scripts for now. The check runs each page as its own program, because the two pages never share a module graph. `web/js/shared-globals.d.ts` declares the names the classic Food Journal scripts share across files — `Config`, `JournalStore`, and `window.__toastTid` — along with the document types they exchange, so the check can tell a real typo from a cross-file reference. The Node packages are dev-only; the Python runtime and the served pages are unaffected. `python -m unittest discover -s tests` runs the check when `npm ci` has installed the tooling, and skips it otherwise.
+
+`tests/test_assets.py` also resolves every relative ES-module import to a real file, since the browser has no bundler to fail on a broken path. The 10 November 2026 smoke check of Compose used a headless Edge run against a temporary journal: sample Estimate and Cook views, manual row save, Journal view, search match and no-match states, goal editing, entry deletion, and a clean browser console. Food Journal was checked in the same run and loaded through its classic client unchanged.
 
 ## Model evaluation
 
@@ -339,11 +341,13 @@ web/
   pages/               nutriparse.html, food-journal.html
   css/nutriparse/      base, compose, results, recipes, journal
   css/food-journal/    base, layout, compose, journal, responsive
-  js/nutriparse.js     shared state, DOM refs, mode and view switching
-  js/nutriparse/       request, estimate, recipes, inspector, journal, samples, boot
-  js/food-journal.js   the second page's behaviour
-  js/journal-client.js browser side of the journal API and localStorage migration
+  js/nutriparse.js     Compose module: DOM refs, state, copy, mode and view switches
+  js/nutriparse/       boot entry plus request, estimate, recipes, inspector, journal, samples
+  js/food-journal.js   the second page's behaviour (classic script)
+  js/journal-store.js  shared journal API as ES modules; Compose imports it
+  js/journal-client.js classic-script shim that forwards window.JournalStore to journal-store.js
   js/config-client.js  server-driven AI timeouts shared by both pages
+  js/config-module.js  ES-module interface to config-client.js
   js/shared-globals.d.ts  declarations for the globals the classic scripts share
   assets/              favicon files
 scripts/

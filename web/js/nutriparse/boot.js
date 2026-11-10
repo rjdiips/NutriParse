@@ -1,5 +1,18 @@
 /* ---------- boot ---------- */
 
+/* Compose's single module entry point. Importing request.js registers the
+   composer, parse, retry, and sample listeners; the named imports below cover
+   everything else this entry uses. */
+
+import {
+  el, COPY, state, setMode, setView, updateCount,
+} from '../nutriparse.js';
+import { Config } from '../config-module.js';
+import { showSample } from './samples.js';
+import { loadJournal, renderJournal } from './journal.js';
+import { repaintStepsOverflow } from './recipes.js';
+import './request.js';
+
 el.resultTitle.tabIndex = -1;
 el.cookTitle.tabIndex = -1;
 

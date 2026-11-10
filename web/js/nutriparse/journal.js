@@ -1,11 +1,20 @@
 /* ---------- journal store ---------- */
 
+import {
+  el, state, num, fmt0, fmt1, cap, localDateISO, longDate, shortDate, dayLabel,
+  announce, showError, registerJournalRenderer,
+} from '../nutriparse.js';
+import {
+  read, addEntries, removeEntry, setGoal, claimBrowserEntries,
+} from '../journal-store.js';
+
 /* The journal lives in the server's data.json rather than in this browser, so
    the Compose page's Journal view and the Food Journal read one document.
-   journal-client.js holds the calls; every one of them answers with the whole
+   journal-store.js holds the calls; every one of them answers with the whole
    store, so the copy below is always whatever the server last saved. */
 
-let journal = { calorie_goal: 2000, entries: [] };let journalLoaded = false;
+let journal = { calorie_goal: 2000, entries: [] };
+let journalLoaded = false;
 let journalError = '';
 let migrated = false;
 let saving = false;
@@ -19,9 +28,9 @@ function applyDoc(doc) {
   return journal;
 }
 
-async function loadJournal() {
+export async function loadJournal() {
   try {
-    applyDoc(await JournalStore.read());
+    applyDoc(await read());
     journalError = '';
   } catch (error) {
     journalLoaded = false;
@@ -31,7 +40,7 @@ async function loadJournal() {
   if (migrated) return;
   migrated = true;
   try {
-    const claim = await JournalStore.claimBrowserEntries(journal);
+    const claim = await claimBrowserEntries(journal);
     if (claim.document) applyDoc(claim.document);
     if (claim.moved) {
       announce(`Moved ${claim.moved} ${claim.moved === 1 ? 'entry' : 'entries'} from this browser to the server.`);
@@ -72,7 +81,7 @@ el.save.addEventListener('click', async () => {
   el.save.disabled = true;
   el.save.textContent = 'Saving…';
   try {
-    applyDoc(await JournalStore.addEntries(entries));
+    applyDoc(await addEntries(entries));
   } catch (error) {
     saving = false;
     el.save.disabled = false;
@@ -178,7 +187,7 @@ function buildDay(group) {
 async function deleteEntry(entry) {
   if (!window.confirm(`Delete "${entry.name}" (${entry.date})? This cannot be undone.`)) return;
   try {
-    applyDoc(await JournalStore.removeEntry(entry.id));
+    applyDoc(await removeEntry(entry.id));
   } catch (error) {
     showError('Could not delete', error.message || 'The journal is unavailable.', false);
     return;
@@ -187,7 +196,7 @@ async function deleteEntry(entry) {
   announce(`Deleted ${entry.name}.`);
 }
 
-function renderJournal() {
+export function renderJournal() {
   const goal = num(journal.calorie_goal) || 2000;
   const today = localDateISO();
   const todayEntries = journal.entries.filter((entry) => entry.date === today);
@@ -249,7 +258,7 @@ async function saveGoal() {
   }
   el.goalStatus.textContent = 'Saving…';
   try {
-    applyDoc(await JournalStore.setGoal(Math.round(value)));
+    applyDoc(await setGoal(Math.round(value)));
   } catch (error) {
     el.goalStatus.textContent = `Could not save the goal: ${error.message}`;
     return;
@@ -259,6 +268,7 @@ async function saveGoal() {
   announce(`Daily goal set to ${fmt0(journal.calorie_goal)} calories.`);
 }
 
+registerJournalRenderer(renderJournal);
 el.journalSearch.addEventListener('input', renderJournal);
 el.saveGoal.addEventListener('click', saveGoal);
 el.goalInput.addEventListener('keydown', (event) => {
@@ -273,4 +283,3 @@ el.goalInput.addEventListener('keydown', (event) => {
     el.goalInput.focus();
   });
 });
-

@@ -1,5 +1,11 @@
 /* ---------- samples ---------- */
 
+import {
+  el, state, announce, updateCount, syncPanels, hideError,
+} from '../nutriparse.js';
+import { renderItems } from './estimate.js';
+import { renderRecipes } from './recipes.js';
+
 const SAMPLE_MEAL = {
   items: [
     { name: 'Roti (whole wheat)', portion: '2 medium', calories: 224, protein: 7.4, carbs: 43.2, fat: 3.6 },
@@ -64,7 +70,7 @@ const SAMPLE_RECIPES = {
   meta: { provider: 'sample', model: 'sample/fixture', elapsed_ms: 0, prompt_tokens: null, completion_tokens: null, sample: true },
 };
 
-function showSample(mode) {
+export function showSample(mode) {
   hideError();
   if (mode === 'cook') {
     state.cookReady = true;
@@ -81,4 +87,3 @@ function showSample(mode) {
   updateCount();
   syncPanels();
 }
-
