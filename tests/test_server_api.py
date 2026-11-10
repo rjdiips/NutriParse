@@ -147,10 +147,6 @@ class TestStaticAllowlist(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.headers["content-type"].startswith("text/html"))
 
-        script = self.client.get("/nutriparse.js")
-        self.assertEqual(script.status_code, 200)
-        self.assertTrue(script.headers["content-type"].startswith("text/javascript"))
-
         asset = self.client.get("/assets/js/nutriparse.js")
         self.assertEqual(asset.status_code, 200)
         self.assertTrue(asset.headers["content-type"].startswith("text/javascript"))
@@ -171,6 +167,11 @@ class TestStaticAllowlist(ApiTestCase):
         page_asset = self.client.get("/assets/js/food-journal.js")
         self.assertEqual(page_asset.status_code, 200)
         self.assertTrue(page_asset.headers["content-type"].startswith("text/javascript"))
+
+    def test_retired_legacy_scripts_are_not_served(self):
+        for path in ("/nutriparse.js", "/food-journal.js"):
+            with self.subTest(path=path):
+                self.assert_error(self.client.get(path), 404, "Not Found")
 
     def test_private_files_are_not_reachable(self):
         for path in ("/requirements.txt", "/.env", "/store.py", "/data.json", "/app/main.py"):

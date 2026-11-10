@@ -25,9 +25,7 @@ PAGE_ROUTES = {
 LEGACY_ASSET_ROUTES = {
     "/nutriparse.css": "web/css/nutriparse.css",
     "/food-journal.css": "web/css/food-journal.css",
-    "/nutriparse.js": "web/js/nutriparse-legacy.js",
     "/journal-client.js": "web/js/journal-client.js",
-    "/food-journal.js": "web/js/food-journal.js",
     "/favicon.svg": "web/assets/favicon.svg",
     "/favicon.ico": "web/assets/favicon.ico",
 }

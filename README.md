@@ -371,9 +371,11 @@ image-cache/           generated recipe PNGs keyed by content hash (ignored by G
 ```
 
 The public asset URLs are stable: pages still load at `/` and
-`/food-journal.html`, and the older `/nutriparse.js`, `/nutriparse.css`,
-`/journal-client.js`, and `/food-journal.css` URLs remain as compatibility
-aliases. `/journal-client.js` is compatibility-only: the current pages import
-`web/js/journal-store.js` directly, and the shim exists for pages built before
-the module split. New files are served from `/assets/`, which mounts only `web/`;
-source, `.env`, and journals stay outside the reachable tree.
+`/food-journal.html`, and the older `/nutriparse.css`, `/journal-client.js`, and
+`/food-journal.css` URLs remain as compatibility aliases. `/journal-client.js`
+is compatibility-only: the current pages import `web/js/journal-store.js`
+directly, and the shim exists for pages built before the module split. The old
+`/nutriparse.js` and `/food-journal.js` script URLs were retired with the module
+conversion because their classic loading model no longer matched the files. New
+files are served from `/assets/`, which mounts only `web/`; source, `.env`, and
+journals stay outside the reachable tree.
