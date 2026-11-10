@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "web/js/shared-globals.d.ts",
+    "web/js/config-client.js",
+    "web/js/journal-client.js",
+    "web/js/nutriparse.js",
+    "web/js/nutriparse/**/*.js"
+  ]
+}

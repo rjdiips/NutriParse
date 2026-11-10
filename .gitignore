@@ -27,3 +27,6 @@ resume/
 
 # Local virtual environment
 .venv/
+
+# Dev-only Node tooling for the JavaScript type check
+node_modules/

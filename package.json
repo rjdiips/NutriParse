@@ -1,0 +1,12 @@
+{
+  "name": "calorie-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JavaScript type-checking for the NutriParse browser frontend.",
+  "scripts": {
+    "check:js": "tsc -p tsconfig.json && tsc -p tsconfig.food-journal.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

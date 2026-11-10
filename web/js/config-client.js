@@ -26,6 +26,7 @@
     return (config && config[kind]) || { serverMs: null, waitMs: FALLBACK_MS };
   }
 
+  /** @returns {ClientConfig} */
   function fromPayload(payload) {
     const body = payload && typeof payload === 'object' ? payload : {};
     const parse = milliseconds(body.parse_timeout_ms);
@@ -51,6 +52,7 @@
       + `AI calls will wait up to ${FALLBACK_MS / 1000} seconds; the journal still works.`;
   }
 
+  /** @returns {ClientConfig} */
   function fallback(error) {
     const reason = error instanceof Error ? error.message : String(error || 'unknown error');
     return {
@@ -64,6 +66,10 @@
     };
   }
 
+  /**
+   * @param {typeof fetch} [fetchImpl]
+   * @returns {Promise<ClientConfig>}
+   */
   async function load(fetchImpl) {
     const doFetch = fetchImpl || global.fetch;
     const controller = new AbortController();

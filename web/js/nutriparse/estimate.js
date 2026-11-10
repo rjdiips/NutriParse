@@ -31,7 +31,7 @@ function resetTotals() {
     .forEach((node) => { node.textContent = '—'; });
   el.totalsNote.textContent = '';
   el.macrobar.querySelectorAll('.macrobar__seg')
-    .forEach((seg) => { seg.style.width = '0%'; });
+    .forEach((seg) => { /** @type {HTMLElement} */ (seg).style.width = '0%'; });
   el.macrobar.removeAttribute('aria-label');
 }
 
@@ -166,9 +166,9 @@ function recompute() {
   const p = share(totals.protein, 4);
   const c = share(totals.carbs, 4);
   const f = share(totals.fat, 9);
-  el.macrobar.querySelector('[data-macro="p"]').style.width = `${(p * 100).toFixed(1)}%`;
-  el.macrobar.querySelector('[data-macro="c"]').style.width = `${(c * 100).toFixed(1)}%`;
-  el.macrobar.querySelector('[data-macro="f"]').style.width = `${(f * 100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (el.macrobar.querySelector('[data-macro="p"]')).style.width = `${(p * 100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (el.macrobar.querySelector('[data-macro="c"]')).style.width = `${(c * 100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (el.macrobar.querySelector('[data-macro="f"]')).style.width = `${(f * 100).toFixed(1)}%`;
   el.macrobar.setAttribute(
     'aria-label',
     `Macro energy split: protein ${Math.round(p * 100)}%, carbs ${Math.round(c * 100)}%, fat ${Math.round(f * 100)}%`,

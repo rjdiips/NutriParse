@@ -39,8 +39,8 @@ function dayLabel(iso){
   return weekdayLong(iso);
 }
 
-document.getElementById('date').value=today();
-document.getElementById('goalInput').value=data.calorie_goal;
+/** @type {HTMLInputElement} */ (document.getElementById('date')).value=today();
+/** @type {HTMLInputElement} */ (document.getElementById('goalInput')).value=String(data.calorie_goal);
 document.getElementById('headerDate').textContent=longDate(today());
 
 function activateTab(name){
@@ -54,7 +54,7 @@ function activateTab(name){
   render();
 }
 
-document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>activateTab(el.dataset.tab)));
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-tab]')).forEach(el=>el.addEventListener('click',()=>activateTab(el.dataset.tab)));
 
 async function parseMealText(text){
   await timeoutReady;
@@ -246,9 +246,9 @@ function glideTo(target){
 }
 
 document.getElementById('conjureBtn').addEventListener('click',async()=>{
-  const ingredients=document.getElementById('alchemistIngredients').value.trim();
-  const useSoon=document.getElementById('alchemistUseSoon').value.trim();
-  const btn=document.getElementById('conjureBtn');
+  const ingredients=/** @type {HTMLTextAreaElement} */ (document.getElementById('alchemistIngredients')).value.trim();
+  const useSoon=/** @type {HTMLInputElement} */ (document.getElementById('alchemistUseSoon')).value.trim();
+  const btn=/** @type {HTMLButtonElement} */ (document.getElementById('conjureBtn'));
   const status=document.getElementById('alchemistStatus');
   const results=document.getElementById('recipeResults');
   if(!ingredients){ status.textContent='Add at least one ingredient to begin the experiment.'; document.getElementById('alchemistIngredients').focus(); return; }
@@ -289,18 +289,18 @@ function num(n){ return Math.max(0, Number(n)||0); }
 
 function setParseBusy(busy){
   parsedState.busy=busy;
-  const parseBtn=document.getElementById('parseBtn');
+  const parseBtn=/** @type {HTMLButtonElement} */ (document.getElementById('parseBtn'));
   parseBtn.disabled=busy;
   parseBtn.setAttribute('aria-busy', busy?'true':'false');
   parseBtn.innerHTML=busy?'<span class="spinner"></span>Estimating…':'Estimate nutrition';
-  const manualBtn=document.getElementById('manualRowBtn');
+  const manualBtn=/** @type {HTMLButtonElement | null} */ (document.getElementById('manualRowBtn'));
   if(manualBtn) manualBtn.disabled=busy;
-  const saveBtn=document.getElementById('saveParsedBtn');
+  const saveBtn=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(saveBtn) saveBtn.disabled=busy||parsedState.items.length===0;
 }
 
 function updateMealCount(){
-  const text=document.getElementById('mealText');
+  const text=/** @type {HTMLTextAreaElement} */ (document.getElementById('mealText'));
   document.getElementById('mealCount').textContent=String(text.value.length);
 }
 
@@ -316,7 +316,7 @@ function resetParsedTotals(){
     document.getElementById(id).textContent='—';
   });
   document.getElementById('totalsNote').textContent='';
-  document.querySelectorAll('#parsedMacrobar [data-macro]').forEach(seg=>{ seg.style.width='0%'; });
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#parsedMacrobar [data-macro]')).forEach(seg=>{ seg.style.width='0%'; });
   document.getElementById('macroLegend').textContent='';
 }
 
@@ -381,7 +381,7 @@ function buildParsedRow(item, index){
       resetParsedTotals();
       /* With every row gone there is nothing left to edit or save. */
       parsedState.editId=null;
-      const save=document.getElementById('saveParsedBtn');
+      const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
       if(save){ save.disabled=true; save.textContent='Save to the record'; }
       return;
     }
@@ -396,7 +396,7 @@ function paintParsedRows(){
   const host=document.getElementById('parsedRows');
   host.replaceChildren();
   parsedState.items.forEach((item,index)=>host.appendChild(buildParsedRow(item,index)));
-  const save=document.getElementById('saveParsedBtn');
+  const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(save) save.disabled=parsedState.busy||parsedState.items.length===0;
   recomputeParsed();
 }
@@ -424,9 +424,9 @@ function recomputeParsed(){
   const share=(grams,perGram)=>energy>0?(grams*perGram)/energy:0;
   const p=share(totals.protein,4), c=share(totals.carbs,4), f=share(totals.fat,9);
   const bar=document.getElementById('parsedMacrobar');
-  bar.querySelector('[data-macro="p"]').style.width=`${(p*100).toFixed(1)}%`;
-  bar.querySelector('[data-macro="c"]').style.width=`${(c*100).toFixed(1)}%`;
-  bar.querySelector('[data-macro="f"]').style.width=`${(f*100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (bar.querySelector('[data-macro="p"]')).style.width=`${(p*100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (bar.querySelector('[data-macro="c"]')).style.width=`${(c*100).toFixed(1)}%`;
+  /** @type {HTMLElement} */ (bar.querySelector('[data-macro="f"]')).style.width=`${(f*100).toFixed(1)}%`;
   document.getElementById('macroLegend').textContent=energy>0
     ? `Protein ${Math.round(p*100)}% · Carbs ${Math.round(c*100)}% · Fat ${Math.round(f*100)}% of energy`
     : 'The macro split appears once there are numbers to divide.';
@@ -436,7 +436,7 @@ function renderParsed(items, sub, kicker='The plate', focus=false){
   /* A fresh set of rows starts in "add" mode; editEntry re-enters edit mode
      after this call, so a recipe seed or a parse can never overwrite an edit. */
   parsedState.editId=null;
-  const save=document.getElementById('saveParsedBtn');
+  const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(save) save.textContent='Save to the record';
   parsedState.items=items.map(item=>({
     name:String(item.name||''),
@@ -457,20 +457,20 @@ function clearParsed(){
   parsedState.editId=null;
   document.getElementById('parsedRows').replaceChildren();
   document.getElementById('parseResult').hidden=true;
-  document.getElementById('mealText').value='';
-  document.getElementById('date').value=today();
+  /** @type {HTMLTextAreaElement} */ (document.getElementById('mealText')).value='';
+  /** @type {HTMLInputElement} */ (document.getElementById('date')).value=today();
   updateMealCount();
   hideParseError();
   clearInlineErrors();
   resetParsedTotals();
-  const save=document.getElementById('saveParsedBtn');
+  const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(save){ save.textContent='Save to the record'; save.disabled=true; }
   setParseBusy(false);
 }
 
 async function parseMeal(){
   if(parsedState.busy) return;
-  const textInput=document.getElementById('mealText');
+  const textInput=/** @type {HTMLTextAreaElement} */ (document.getElementById('mealText'));
   const text=textInput.value.trim();
   clearInlineErrors();
   hideParseError();
@@ -487,7 +487,7 @@ async function parseMeal(){
   document.getElementById('parseResult').hidden=true;
   setParseBusy(true);
   resetParsedTotals();
-  const save=document.getElementById('saveParsedBtn');
+  const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(save){ save.disabled=true; save.textContent='Save to the record'; }
 
   await timeoutReady;
@@ -525,7 +525,7 @@ function manualRow(){
   }
   paintParsedRows();
   glideTo(document.getElementById('parseResult'));
-  const inputs=document.querySelectorAll('#parsedRows .a-cell--name input');
+  const inputs=/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#parsedRows .a-cell--name input'));
   const last=inputs[inputs.length-1];
   if(last) last.focus({preventScroll:true});
 }
@@ -539,14 +539,14 @@ async function saveParsed(){
   const blank=parsedState.items.findIndex(item=>!String(item.name||'').trim());
   if(blank!==-1){
     toast(`Item ${blank+1} needs a name before it can be saved.`,'error');
-    const inputs=document.querySelectorAll('#parsedRows .a-cell--name input');
+    const inputs=/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#parsedRows .a-cell--name input'));
     if(inputs[blank]) inputs[blank].focus();
     return;
   }
 
-  const activeMeal=document.querySelector('.meal-chip.active');
+  const activeMeal=/** @type {HTMLElement | null} */ (document.querySelector('.meal-chip.active'));
   const meal=activeMeal?activeMeal.dataset.meal:'breakfast';
-  let dateStr=document.getElementById('date').value;
+  let dateStr=/** @type {HTMLInputElement} */ (document.getElementById('date')).value;
   if(!dateStr) dateStr=today();
 
   const entries=parsedState.items.map(item=>({
@@ -562,7 +562,7 @@ async function saveParsed(){
 
   const editId=parsedState.editId;
   const editing=editId!==null && editId!==undefined;
-  const saveBtn=document.getElementById('saveParsedBtn');
+  const saveBtn=/** @type {HTMLButtonElement} */ (document.getElementById('saveParsedBtn'));
   saveBtn.disabled=true;
   saveBtn.innerHTML='<span class="spinner"></span>Saving…';
   try{
@@ -582,21 +582,21 @@ async function saveParsed(){
   render();
 }
 
-const mealText=document.getElementById('mealText');
+const mealText=/** @type {HTMLTextAreaElement} */ (document.getElementById('mealText'));
 mealText.addEventListener('input',()=>{
   updateMealCount();
   if(!document.getElementById('parseError').hidden) hideParseError();
 });
-document.querySelectorAll('[data-example]').forEach(chip=>{
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-example]')).forEach(chip=>{
   chip.addEventListener('click',()=>{
     mealText.value=chip.dataset.example||chip.textContent.trim();
     updateMealCount();
     mealText.focus();
   });
 });
-document.querySelectorAll('[data-ingredients]').forEach(chip=>{
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-ingredients]')).forEach(chip=>{
   chip.addEventListener('click',()=>{
-    const ingredients=document.getElementById('alchemistIngredients');
+    const ingredients=/** @type {HTMLTextAreaElement} */ (document.getElementById('alchemistIngredients'));
     ingredients.value=chip.dataset.ingredients||'';
     updateCharacterCount(ingredients,'alchemistIngredientsCount');
     ingredients.focus();
@@ -605,7 +605,7 @@ document.querySelectorAll('[data-ingredients]').forEach(chip=>{
 function updateCharacterCount(input,countId){
   document.getElementById(countId).textContent=String(input.value.length);
 }
-const alchemistIngredients=document.getElementById('alchemistIngredients');
+const alchemistIngredients=/** @type {HTMLTextAreaElement} */ (document.getElementById('alchemistIngredients'));
 alchemistIngredients.addEventListener('input',()=>updateCharacterCount(alchemistIngredients,'alchemistIngredientsCount'));
 updateCharacterCount(alchemistIngredients,'alchemistIngredientsCount');
 document.getElementById('parseBtn').addEventListener('click',parseMeal);
@@ -676,13 +676,13 @@ function editEntry(id){
   const entry=data.entries.find(e=>String(e.id)===String(id));
   if(!entry) return;
   activateTab('add');
-  document.querySelectorAll('.meal-chip').forEach(c=>{
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.meal-chip')).forEach(c=>{
     const on=c.dataset.meal===entry.meal;
     c.classList.toggle('active',on);
-    c.setAttribute('aria-pressed',on);
+    c.setAttribute('aria-pressed',String(on));
   });
-  document.getElementById('date').value=entry.date||today();
-  document.getElementById('mealText').value=entry.name;
+  /** @type {HTMLInputElement} */ (document.getElementById('date')).value=entry.date||today();
+  /** @type {HTMLTextAreaElement} */ (document.getElementById('mealText')).value=entry.name;
   updateMealCount();
   renderParsed(
     [{name:entry.name,portion:entry.portion||'',calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat}],
@@ -691,7 +691,7 @@ function editEntry(id){
   );
   /* renderParsed resets to add mode, so re-assert the edit we are starting. */
   parsedState.editId=entry.id;
-  const save=document.getElementById('saveParsedBtn');
+  const save=/** @type {HTMLButtonElement | null} */ (document.getElementById('saveParsedBtn'));
   if(save) save.textContent='Save changes';
 }
 
@@ -714,7 +714,7 @@ function renderEntries(){
   const body=document.getElementById('entryBody');
   const empty=document.getElementById('emptyState');
   const noResults=document.getElementById('noResults');
-  const search=document.getElementById('entriesSearch')?.value||'';
+  const search=/** @type {HTMLInputElement | null} */ (document.getElementById('entriesSearch'))?.value||'';
   body.replaceChildren();
   if(data.entries.length===0){
     empty.classList.add('is-visible');
@@ -801,13 +801,13 @@ function renderSummary(){
   document.getElementById('todayTargetNote').textContent=`calories · ${Math.round(pct)}% used`;
   const bar=document.getElementById('todayProgressBar');
   bar.style.width=pct+'%';
-  bar.parentElement.setAttribute('aria-valuenow',Math.round(pct));
+  bar.parentElement.setAttribute('aria-valuenow',String(Math.round(pct)));
   renderTodayMenu(tt);
 }
 
 function renderGoal(){
-  const input=document.getElementById('goalInput');
-  if(document.activeElement!==input) input.value=data.calorie_goal;
+  const input=/** @type {HTMLInputElement} */ (document.getElementById('goalInput'));
+  if(document.activeElement!==input) input.value=String(data.calorie_goal);
   document.getElementById('goalStatus').textContent='Current daily calorie goal: '+fmt(data.calorie_goal)+'.';
   const goal=data.calorie_goal;
   const tt=totalsForDate(data.entries,today());
@@ -818,12 +818,12 @@ function renderGoal(){
   document.getElementById('goalRemaining').textContent=remaining>=0?`${fmt(remaining)} remaining`:`${fmt(Math.abs(remaining))} over`;
   const bar=document.getElementById('goalProgressBar');
   bar.style.width=pct+'%';
-  bar.parentElement.setAttribute('aria-valuenow',Math.round(pct));
+  bar.parentElement.setAttribute('aria-valuenow',String(Math.round(pct)));
 }
 
 document.getElementById('saveGoal').addEventListener('click', async ()=>{
-  const g=parseFloat(document.getElementById('goalInput').value);
-  const goalInput=document.getElementById('goalInput');
+  const g=parseFloat(/** @type {HTMLInputElement} */ (document.getElementById('goalInput')).value);
+  const goalInput=/** @type {HTMLInputElement} */ (document.getElementById('goalInput'));
   clearInlineErrors();
   if(isNaN(g)||g<1){ showInlineError(goalInput,'Value must be at least 1.'); goalInput.focus(); return; }
   try{
@@ -838,19 +838,19 @@ document.getElementById('saveGoal').addEventListener('click', async ()=>{
   toast('Daily goal updated to '+fmt(data.calorie_goal)+' calories.','success');
 });
 
-document.querySelectorAll('[data-goal-preset]').forEach(btn=>btn.addEventListener('click',()=>{
-  document.getElementById('goalInput').value=btn.dataset.goalPreset;
-  document.getElementById('goalInput').focus();
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-goal-preset]')).forEach(btn=>btn.addEventListener('click',()=>{
+  /** @type {HTMLInputElement} */ (document.getElementById('goalInput')).value=btn.dataset.goalPreset;
+  /** @type {HTMLInputElement} */ (document.getElementById('goalInput')).focus();
 }));
 
-document.querySelectorAll('.meal-chip').forEach(c=>{
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.meal-chip')).forEach(c=>{
   c.classList.toggle('active', c.dataset.meal==='breakfast');
-  c.setAttribute('aria-pressed', c.dataset.meal==='breakfast');
+  c.setAttribute('aria-pressed', String(c.dataset.meal==='breakfast'));
   c.addEventListener('click',()=>{
-    document.querySelectorAll('.meal-chip').forEach(x=>{
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.meal-chip')).forEach(x=>{
       const active=(x===c);
       x.classList.toggle('active', active);
-      x.setAttribute('aria-pressed', active);
+      x.setAttribute('aria-pressed', String(active));
     });
   });
 });

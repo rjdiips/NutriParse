@@ -170,7 +170,7 @@ function repaintStepsOverflow() {
 }
 
 async function loadRecipeImage(recipe, index) {
-  const media = el.recipeGrid.querySelector(`[data-recipe-index="${index}"] .recipe__media`);
+  const media = /** @type {HTMLElement | null} */ (el.recipeGrid.querySelector(`[data-recipe-index="${index}"] .recipe__media`));
   if (!media) return;
 
   if (recipe.image_unavailable || !recipe.image_pending) {
@@ -262,7 +262,7 @@ function startManualRow() {
       rawLabel: 'Will be saved',
     },
   );
-  const first = el.rows.querySelector('.row__name');
+  const first = /** @type {HTMLElement | null} */ (el.rows.querySelector('.row__name'));
   if (first) first.focus({ preventScroll: true });
   announce('Blank row added. Type a name and the numbers, then save.');
 }

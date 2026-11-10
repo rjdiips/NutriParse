@@ -5,7 +5,7 @@ function setBusy(busy, mode = state.mode) {
   el.parse.disabled = busy;
   el.parse.textContent = busy ? COPY[mode].busy : COPY[state.mode].cta;
   el.parse.setAttribute('aria-busy', busy ? 'true' : 'false');
-  document.querySelectorAll('.mode').forEach((button) => {
+  /** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('.mode')).forEach((button) => {
     button.disabled = busy;
   });
 }

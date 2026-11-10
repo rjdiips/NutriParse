@@ -51,7 +51,7 @@ el.save.addEventListener('click', async () => {
   const blank = state.items.findIndex((item) => !String(item.name || '').trim());
   if (blank !== -1) {
     showError('Name every row', `Row ${blank + 1} needs a food name before it can be saved.`, false);
-    const input = el.rows.querySelectorAll('.row__name')[blank];
+    const input = /** @type {HTMLElement | undefined} */ (el.rows.querySelectorAll('.row__name')[blank]);
     if (input) input.focus();
     return;
   }
@@ -267,7 +267,7 @@ el.goalInput.addEventListener('keydown', (event) => {
     saveGoal();
   }
 });
-document.querySelectorAll('[data-goal-preset]').forEach((button) => {
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-goal-preset]')).forEach((button) => {
   button.addEventListener('click', () => {
     el.goalInput.value = button.dataset.goalPreset;
     el.goalInput.focus();

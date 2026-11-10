@@ -35,15 +35,16 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Configuration](#
 | Image generation | stable-diffusion.cpp CUDA build serving SDXL-Turbo through an AUTOMATIC1111-compatible `/sdapi/v1/txt2img` API |
 | Persistence | One local JSON document (`data.json`) with validation, atomic `os.replace` writes, and a cross-process lock file — no database |
 | Configuration | One typed `pydantic-settings` object for `.env` and the process environment, with process variables taking priority and mtime-based live reload |
-| Testing | Python `unittest` for the store and FastAPI routes, plus Node's built-in runner for the browser config loader; `httpx` provides the `TestClient` transport |
+| Testing | Python `unittest` for the store and FastAPI routes, plus Node's built-in runner for the browser config loader and TypeScript's `checkJs` mode for the browser scripts; `httpx` provides the `TestClient` transport |
 | Evaluation | A committed harness in `evals/` with fixed meal fixtures, reference calorie ranges, and Markdown/JSON results |
 | Logging | Python `logging` with a 2 MB rotating handler at `logs/llm.log`, keeping five backups |
-| Tooling | pip with `requirements.txt` / `requirements-dev.txt`; Windows batch scripts for the optional CUDA image service |
+| Tooling | pip with `requirements.txt` / `requirements-dev.txt`; npm with a committed lockfile for the dev-only JavaScript type check; Windows batch scripts for the optional CUDA image service |
 
 ## Requirements
 
 - Python 3.10+
 - FastAPI, Uvicorn, and httpx
+- Node.js 18+ and npm, only for the optional JavaScript type check
 
 Install the backend dependencies once:
 
@@ -51,7 +52,7 @@ Install the backend dependencies once:
 python -m pip install -r requirements.txt
 ```
 
-The journal store needs nothing beyond the standard library. Recipe images are optional and use a separate local service (see below).
+The journal store needs nothing beyond the standard library. Recipe images are optional and use a separate local service (see below). The Node packages are development tooling only: neither the server nor the pages load them at runtime.
 
 ## Configuration
 
@@ -290,6 +291,17 @@ python -m unittest discover -s tests
 
 Both browser surfaces are also exercised with headless-browser runs of the Compose, Journal and Cook views during development; those live outside the repo.
 
+### JavaScript type check
+
+The browser code is plain classic JavaScript, so a misspelled shared global is a runtime error rather than a build error. TypeScript's `checkJs` mode closes that gap without adding a bundler or a build step.
+
+```powershell
+npm ci
+npm run check:js
+```
+
+`npm ci` installs the committed `package-lock.json`. The check runs each page as its own program, because the Compose page and the Food Journal never share a global scope. `web/js/shared-globals.d.ts` declares the names the classic scripts share across files — `Config`, `JournalStore`, and `window.__toastTid` — along with the document types they exchange, so the check can tell a real typo from a cross-file reference. The Node packages are dev-only; the Python runtime and the served pages are unaffected. `python -m unittest discover -s tests` runs the check when `npm ci` has installed the tooling, and skips it otherwise.
+
 ## Model evaluation
 
 `evals/` holds a committed harness that scores `/api/parse` against fixed meals with reference calorie ranges. It exists because "the model under-counts" is an anecdote until it is measured, and because a prompt change needs something to compare against.
@@ -332,16 +344,22 @@ web/
   js/food-journal.js   the second page's behaviour
   js/journal-client.js browser side of the journal API and localStorage migration
   js/config-client.js  server-driven AI timeouts shared by both pages
+  js/shared-globals.d.ts  declarations for the globals the classic scripts share
   assets/              favicon files
 scripts/
   seed_demo.py         writes data.demo.json for screenshots
   setup_image_generator.bat / start_image_generator.bat  CUDA image service
   start_llm.bat        starts a local llama.cpp server with the expected settings
-tests/                 store, asset-link, settings, FastAPI, and browser config-loader tests
+tests/                 store, asset-link, settings, FastAPI, browser config-loader, and JS type-check tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
 requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings, httpx)
 requirements-dev.txt   installs the runtime requirements for the test suite
+package.json           dev-only Node manifest for the JavaScript type check
+package-lock.json      committed lockfile for the type-check toolchain
+tsconfig.json          the Compose page's script graph
+tsconfig.base.json     shared TypeScript options for checking JavaScript
+tsconfig.food-journal.json  the Food Journal's script graph
 data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
 image-cache/           generated recipe PNGs keyed by content hash (ignored by Git; delete to clear)
 .env                   your OpenRouter API key (create from `.env.example`; do not commit)

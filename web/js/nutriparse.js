@@ -8,14 +8,14 @@ const COOK_ENDPOINT = '/api/leftover-alchemist';
 const IMAGE_ENDPOINT = '/api/recipe-image';
 
 const el = {
-  text: document.getElementById('mealText'),
+  text: /** @type {HTMLTextAreaElement} */ (document.getElementById('mealText')),
   count: document.getElementById('charCount'),
-  parse: document.getElementById('parseBtn'),
+  parse: /** @type {HTMLButtonElement} */ (document.getElementById('parseBtn')),
   hintVerb: document.getElementById('hintVerb'),
   label: document.getElementById('composeLabel'),
   sub: document.getElementById('composeSub'),
   useSoonWrap: document.getElementById('useSoonWrap'),
-  useSoon: document.getElementById('useSoon'),
+  useSoon: /** @type {HTMLInputElement} */ (document.getElementById('useSoon')),
   status: document.getElementById('status'),
   configNotice: document.getElementById('configNotice'),
   configNoticeMsg: document.getElementById('configNoticeMsg'),
@@ -28,15 +28,15 @@ const el = {
   resultTitle: document.getElementById('resultTitle'),
   resultSub: document.getElementById('resultSub'),
   rows: document.getElementById('rows'),
-  meal: document.getElementById('mealSelect'),
-  save: document.getElementById('saveBtn'),
+  meal: /** @type {HTMLSelectElement} */ (document.getElementById('mealSelect')),
+  save: /** @type {HTMLButtonElement} */ (document.getElementById('saveBtn')),
   totalsNote: document.getElementById('totalsNote'),
   totalCalories: document.getElementById('totalCalories'),
   totalProtein: document.getElementById('totalProtein'),
   totalCarbs: document.getElementById('totalCarbs'),
   totalFat: document.getElementById('totalFat'),
   macrobar: document.getElementById('macrobar'),
-  inspector: document.getElementById('inspector'),
+  inspector: /** @type {HTMLDetailsElement} */ (document.getElementById('inspector')),
   empty: document.getElementById('empty'),
   emptyLabel: document.getElementById('emptyLabel'),
   emptyText: document.getElementById('emptyText'),
@@ -44,7 +44,7 @@ const el = {
   cookTitle: document.getElementById('cookTitle'),
   cookSub: document.getElementById('cookSub'),
   cookNote: document.getElementById('cookNote'),
-  cookInspector: document.getElementById('cookInspector'),
+  cookInspector: /** @type {HTMLDetailsElement} */ (document.getElementById('cookInspector')),
   recipeGrid: document.getElementById('recipeGrid'),
 
   viewCompose: document.getElementById('view-compose'),
@@ -66,10 +66,10 @@ const el = {
   todayCarbs: document.getElementById('todayCarbs'),
   todayFat: document.getElementById('todayFat'),
   todayCount: document.getElementById('todayCount'),
-  goalInput: document.getElementById('goalInput'),
+  goalInput: /** @type {HTMLInputElement} */ (document.getElementById('goalInput')),
   goalStatus: document.getElementById('goalStatus'),
   saveGoal: document.getElementById('saveGoalBtn'),
-  journalSearch: document.getElementById('journalSearch'),
+  journalSearch: /** @type {HTMLInputElement} */ (document.getElementById('journalSearch')),
   journalDays: document.getElementById('journalDays'),
   journalEmpty: document.getElementById('journalEmpty'),
   journalEmptyLabel: document.getElementById('journalEmptyLabel'),
@@ -203,12 +203,12 @@ function setMode(mode) {
   state.mode = mode;
   const copy = COPY[mode];
 
-  document.querySelectorAll('.mode').forEach((button) => {
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.mode')).forEach((button) => {
     const active = button.dataset.mode === mode;
     button.classList.toggle('is-active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
-  document.querySelectorAll('[data-examples]').forEach((group) => {
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-examples]')).forEach((group) => {
     group.hidden = group.dataset.examples !== mode;
   });
 
@@ -232,7 +232,7 @@ function syncPanels() {
   el.empty.hidden = showEstimate || showCook;
 }
 
-document.querySelectorAll('.mode').forEach((button) => {
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.mode')).forEach((button) => {
   button.addEventListener('click', () => {
     if (state.busy) return;
     setMode(button.dataset.mode);
@@ -246,7 +246,7 @@ const VIEW_TITLES = { compose: 'NutriParse â€” Compose', journal: 'NutriParse â€
 
 function setView(view) {
   state.view = view;
-  document.querySelectorAll('.viewtab').forEach((button) => {
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.viewtab')).forEach((button) => {
     const active = button.dataset.view === view;
     button.classList.toggle('is-active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
@@ -257,7 +257,7 @@ function setView(view) {
   if (view === 'journal') renderJournal();
 }
 
-document.querySelectorAll('.viewtab').forEach((button) => {
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.viewtab')).forEach((button) => {
   button.addEventListener('click', () => {
     if (state.view === button.dataset.view) return;
     setView(button.dataset.view);
@@ -279,7 +279,7 @@ el.text.addEventListener('input', () => {
   if (!el.error.hidden) hideError();
 });
 
-document.querySelectorAll('.chip--example').forEach((chip) => {
+/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.chip--example')).forEach((chip) => {
   chip.addEventListener('click', () => {
     el.text.value = chip.dataset.example || chip.textContent.trim();
     updateCount();
