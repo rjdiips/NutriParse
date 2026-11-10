@@ -30,3 +30,6 @@ resume/
 
 # Dev-only Node tooling for the JavaScript type check
 node_modules/
+
+# Local scratch notes and ticket drafts
+.scratch/
