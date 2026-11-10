@@ -28,7 +28,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Configuration](#
 | Layer | What NutriParse uses |
 | --- | --- |
 | Language | Python 3.10+ for the API, store, and evaluation harness; vanilla JavaScript in the browser |
-| Backend | FastAPI on Uvicorn, with Starlette and Pydantic underneath |
+| Backend | FastAPI on Uvicorn, with Starlette and Pydantic underneath; one shared `httpx` async client for provider calls |
 | Frontend | HTML5, CSS, and plain JavaScript — no framework, bundler, or build step |
 | API surface | REST/JSON endpoints for parsing, cooking, recipe images, and journal CRUD |
 | LLM providers | OpenRouter by default; any OpenAI-compatible endpoint for local inference — Ollama (default), llama.cpp, LM Studio, vLLM |
@@ -43,7 +43,7 @@ Jump to: [Features](#features) · [Tech stack](#tech-stack) · [Configuration](#
 ## Requirements
 
 - Python 3.10+
-- FastAPI and Uvicorn
+- FastAPI, Uvicorn, and httpx
 
 Install the backend dependencies once:
 
@@ -57,7 +57,9 @@ The journal store needs nothing beyond the standard library. Recipe images are o
 
 Runtime settings live in `.env` (start from `.env.example`) and are parsed into one typed `app.config.Settings` object. Process environment variables override the file for every setting, including the image options and the legacy `OPENROUTER_TOKEN` / `OPEN_ROUTER_API_KEY` key aliases. The server compares the file's mtime on each request, so an edit applies to the next request without a restart. Invalid values — an unknown provider, a non-numeric image size, an out-of-range dimension — stop startup with a message naming the setting. `LLM_TIMEOUT` is the exception: a missing, invalid, or non-positive value falls back to the provider default (30 seconds for parsing and 45 for recipes on OpenRouter, 180 for a local model).
 
-Both pages read the effective parse, cook, and image timeouts from `GET /api/config` at startup; the same endpoint also reports the active provider and model. Each client waits 10 seconds longer than the server's value, so a slow provider gets the server's error rather than a premature client abort, and the request-details panel shows the timeout it used. If the config call fails, AI calls fall back to a 300-second safety net and the page says so; journal reads and writes are unaffected.
+Both pages read the effective parse, cook, and image timeouts from `GET /api/config` at startup; the same endpoint also reports the active provider and model. Each client waits 10 seconds longer than the server's value, so a slow provider gets the server's error rather than a premature client abort, and the request-details panel shows the timeout it used. If the config call fails, AI calls fall back to a 300-second safety net and the page says so; journal reads and writes are unaffected. `LOCAL_IMAGE_TIMEOUT` overrides the image service's 240-second per-call limit, and the reported image timeout follows it.
+
+Model and image calls share one `httpx` async client, created when the server starts. At most three model calls and one image generation run at a time, so a slow image job cannot hold a model slot and concurrent Cook runs do not starve the rest of the app. A 429 or 5xx response is retried up to three total attempts with 0.5 s and then 1.5 s between them; any other 4xx is not retried. Closing the browser tab cancels the in-flight upstream call. Journal routes stay synchronous and use their own store lock.
 
 ## Usage
 
@@ -277,7 +279,7 @@ path, and image data and API credentials are never logged. Each log rotates at
 
 ## Tests
 
-The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the `/api/config` timeouts and headers, and the rules that trim and validate model output. The browser config loader's client-side waits and 300-second fallback run under Node's built-in test runner; that test skips only when Node is not installed.
+The journal store has a stdlib suite covering validation, portions, atomic writes, entry updates, legacy numeric ids, corrupt files, and concurrent writers in both threads and separate processes. The FastAPI surface has a second suite covering the static allowlist, the journal round trip and update path, body validation, same-origin checks on writes, the OpenAPI request/response schemas, the `/api/config` timeouts and headers, and the rules that trim and validate model output. The async transport is tested with a stubbed `httpx.MockTransport` for 429/5xx retries, the stated backoff, no retry on other 4xx, the three-model and one-image concurrency caps, and disconnect cancellation. The browser config loader's client-side waits and 300-second fallback run under Node's built-in test runner; that test skips only when Node is not installed.
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -312,7 +314,7 @@ app/
   logging_config.py    rotating model and image logs
   main.py              FastAPI factory, router wiring, server entry point
   journal/store.py     shared journal: validation, atomic writes, cross-process lock
-  services/            llm.py, nutrition.py, recipes.py, images.py
+  services/            llm.py, nutrition.py, recipes.py, images.py, transport.py
   web/
     dependencies.py    JSON body rules, same-origin guard, journal/LLM helpers
     http.py            one JSON response shape, API headers, exception handlers
@@ -336,8 +338,8 @@ scripts/
 tests/                 store, asset-link, settings, FastAPI, and browser config-loader tests
 evals/                 parse evaluation harness, fixtures, and committed results
 screenshots/           the screenshots used in this README
-requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings)
-requirements-dev.txt   adds the HTTP test transport (`httpx`)
+requirements.txt       backend dependencies (FastAPI, Uvicorn, pydantic-settings, httpx)
+requirements-dev.txt   installs the runtime requirements for the test suite
 data.json              the journal, shared by the Compose view and the Food Journal (created on first write; ignored by Git)
 .env                   your OpenRouter API key (create from `.env.example`; do not commit)
 .image-tools/, models/ downloaded image runtime and models (ignored by Git)

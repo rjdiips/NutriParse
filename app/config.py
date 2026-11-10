@@ -137,6 +137,7 @@ class Settings(BaseSettings):
 
     local_image_api_url: str = DEFAULT_IMAGE_API_URL
     local_image_generation_enabled: bool = True
+    local_image_timeout: float = Field(default=IMAGE_TIMEOUT, gt=0)
     local_image_width: int = Field(default=DEFAULT_IMAGE_WIDTH, ge=64, le=2048)
     local_image_height: int = Field(default=DEFAULT_IMAGE_HEIGHT, ge=64, le=2048)
     local_image_steps: int = Field(default=DEFAULT_IMAGE_STEPS, ge=1, le=100)

@@ -9,17 +9,20 @@ round trip, the body rules, and the same-origin check on writes.
 Run them with:  python -m unittest discover -s tests
 """
 
+import base64
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 try:
+    import httpx
     from fastapi.testclient import TestClient
 
     from app.config import (
@@ -45,6 +48,10 @@ except Exception as error:  # pragma: no cover - only without the API dependenci
 
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
 class ApiTestCase(unittest.TestCase):
+    # Subclasses may inject a stubbed provider transport and zero delays.
+    http_transport = None
+    retry_delays = None
+
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
@@ -56,8 +63,15 @@ class ApiTestCase(unittest.TestCase):
         self.app = create_app(
             settings_provider=self.settings_provider,
             store_path=self.root / "data.json",
+            http_transport=self.http_transport,
+            retry_delays=self.retry_delays,
         )
-        self.client = TestClient(self.app, base_url="http://localhost:8100")
+        # Enter the context manager so the lifespan creates the shared client.
+        stack = ExitStack()
+        self.addCleanup(stack.close)
+        self.client = stack.enter_context(
+            TestClient(self.app, base_url="http://localhost:8100")
+        )
 
     def set_settings(self, **values):
         """Write a temporary .env and reload it, as an operator edit would."""
@@ -195,6 +209,11 @@ class TestRuntimeConfig(ApiTestCase):
         self.assertEqual(body["cook_timeout_ms"], 12500)
         # An LLM override leaves the local image service alone.
         self.assertEqual(body["image_timeout_ms"], milliseconds(IMAGE_TIMEOUT))
+
+    def test_image_timeout_comes_from_the_typed_settings(self):
+        self.set_settings(local_image_timeout=90)
+        body = self.client.get("/api/config").json()
+        self.assertEqual(body["image_timeout_ms"], 90000)
 
     def test_editing_the_timeout_changes_the_next_response(self):
         self.set_settings(llm_provider="openrouter", llm_timeout=10)
@@ -396,17 +415,21 @@ class TestResponseModels(ApiTestCase):
     def test_parse_success_matches_the_response_model(self):
         original = ai.parse_meal
         self.addCleanup(setattr, ai, "parse_meal", original)
-        ai.parse_meal = lambda text, env: {
-            "items": [{
-                "name": "Dal", "portion": "1 bowl", "calories": 150,
-                "protein": 9, "carbs": 20, "fat": 4,
-            }],
-            "totals": {"calories": 150, "protein": 9, "carbs": 20, "fat": 4},
-            "meta": {
-                "provider": "local", "model": "test", "elapsed_ms": 5,
-                "prompt_tokens": 10, "completion_tokens": 20,
-            },
-        }
+
+        async def parse_stub(text, env, transport):
+            return {
+                "items": [{
+                    "name": "Dal", "portion": "1 bowl", "calories": 150,
+                    "protein": 9, "carbs": 20, "fat": 4,
+                }],
+                "totals": {"calories": 150, "protein": 9, "carbs": 20, "fat": 4},
+                "meta": {
+                    "provider": "local", "model": "test", "elapsed_ms": 5,
+                    "prompt_tokens": 10, "completion_tokens": 20,
+                },
+            }
+
+        ai.parse_meal = parse_stub
         response = self.client.post("/api/parse", json={"text": "dal"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["items"][0]["name"], "Dal")
@@ -427,13 +450,16 @@ class TestResponseModels(ApiTestCase):
             "image_pending": False,
             "image_unavailable": True,
         }
-        ai.suggest_recipes = lambda ingredients, use_soon, env: {
-            "recipes": [recipe, recipe, recipe],
-            "meta": {
-                "provider": "local", "model": "test", "elapsed_ms": 5,
-                "prompt_tokens": 10, "completion_tokens": 20,
-            },
-        }
+        async def recipes_stub(ingredients, use_soon, env, transport):
+            return {
+                "recipes": [recipe, recipe, recipe],
+                "meta": {
+                    "provider": "local", "model": "test", "elapsed_ms": 5,
+                    "prompt_tokens": 10, "completion_tokens": 20,
+                },
+            }
+
+        ai.suggest_recipes = recipes_stub
         response = self.client.post(
             "/api/leftover-alchemist", json={"ingredients": "dal", "use_soon": ""}
         )
@@ -443,9 +469,11 @@ class TestResponseModels(ApiTestCase):
     def test_image_success_matches_the_response_model(self):
         original = images.generate_local_recipe_image
         self.addCleanup(setattr, images, "generate_local_recipe_image", original)
-        images.generate_local_recipe_image = (
-            lambda recipe, endpoint, settings: "data:image/png;base64,AAAA"
-        )
+
+        async def image_stub(recipe, endpoint, settings, transport):
+            return "data:image/png;base64,AAAA"
+
+        images.generate_local_recipe_image = image_stub
         self.set_settings(
             local_image_generation_enabled=True,
             local_image_api_url="http://127.0.0.1:7860/sdapi/v1/txt2img",
@@ -492,6 +520,83 @@ class TestAiAndImages(ApiTestCase):
             "/api/recipe-image", json={"title": "Dal", "description": "A bowl of dal"}
         )
         self.assert_error(response, 503, "Local image generation is disabled")
+
+
+@unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
+class TestProviderTransport(ApiTestCase):
+    """The routes use the shared async client with a stubbed provider."""
+
+    def setUp(self):
+        self.calls = 0
+        self.statuses = []
+        self.http_transport = httpx.MockTransport(self.handle)
+        self.retry_delays = (0.0, 0.0)
+        super().setUp()
+        self.set_settings(
+            llm_provider="local",
+            llm_base_url="http://model.test/v1",
+            llm_model="stub",
+            local_image_generation_enabled=True,
+            local_image_api_url="http://images.test/txt2img",
+        )
+
+    def handle(self, request):
+        self.calls += 1
+        status = self.statuses.pop(0) if self.statuses else 200
+        if status != 200:
+            return httpx.Response(status)
+        if request.url.path.endswith("/chat/completions"):
+            return httpx.Response(200, json={
+                "choices": [{"message": {"content": json.dumps({"items": [{
+                    "name": "Dal", "portion": "1 bowl", "calories": 150,
+                    "protein": 9, "carbs": 20, "fat": 4,
+                }]})}}],
+                "usage": {"prompt_tokens": 3, "completion_tokens": 4},
+            })
+        encoded = base64.b64encode(b"fake png").decode()
+        return httpx.Response(200, json={"images": [encoded]})
+
+    def test_transient_provider_failure_is_retried(self):
+        self.statuses = [500, 200]
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"][0]["name"], "Dal")
+        self.assertEqual(self.calls, 2)
+
+    def test_429_is_retried(self):
+        self.statuses = [429, 200]
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.calls, 2)
+
+    def test_other_4xx_is_not_retried(self):
+        self.statuses = [400]
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assert_error(response, 502, "Local model returned HTTP 400")
+        self.assertEqual(self.calls, 1)
+
+    def test_three_total_attempts_then_502(self):
+        self.statuses = [500, 503, 500]
+        response = self.client.post("/api/parse", json={"text": "dal"})
+        self.assert_error(response, 502, "Local model returned HTTP 500")
+        self.assertEqual(self.calls, 3)
+
+    def test_image_retries_transient_failures(self):
+        self.statuses = [503, 200]
+        response = self.client.post(
+            "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["image"].startswith("data:image/png;base64,"))
+        self.assertEqual(self.calls, 2)
+
+    def test_image_fails_after_three_attempts(self):
+        self.statuses = [500, 500, 500]
+        response = self.client.post(
+            "/api/recipe-image", json={"title": "Dal", "description": "A bowl"}
+        )
+        self.assert_error(response, 503, "Recipe image could not be generated")
+        self.assertEqual(self.calls, 3)
 
 
 def complete_recipe(steps=5, **overrides):
@@ -560,7 +665,7 @@ class TestRecipeRules(unittest.TestCase):
 
 
 @unittest.skipUnless(TestClient is not None, globals().get("SKIP_REASON", ""))
-class TestRecipeRepair(unittest.TestCase):
+class TestRecipeRepair(unittest.IsolatedAsyncioTestCase):
     """A malformed answer earns one repair attempt, then the request fails."""
 
     def setUp(self):
@@ -569,29 +674,35 @@ class TestRecipeRepair(unittest.TestCase):
         self.prompts = []
 
     def answers(self, *replies):
-        def request(prompt, env, system_prompt, **kwargs):
+        async def request(prompt, env, system_prompt, transport, **kwargs):
             self.prompts.append(prompt)
             return replies[len(self.prompts) - 1]
         recipes.request_ai = request
 
-    def test_a_sound_first_answer_is_not_repaired(self):
+    async def test_a_sound_first_answer_is_not_repaired(self):
         self.answers(complete_answer())
-        result = recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
+        result = await recipes.suggest_recipes(
+            ["dal"], "", Settings(_env_file=None), transport=None
+        )
         self.assertEqual(len(self.prompts), 1)
         self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
 
-    def test_a_bad_first_answer_is_repaired_once(self):
+    async def test_a_bad_first_answer_is_repaired_once(self):
         self.answers(complete_answer(complete_recipe(steps=2)), complete_answer())
-        result = recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
+        result = await recipes.suggest_recipes(
+            ["dal"], "", Settings(_env_file=None), transport=None
+        )
         self.assertEqual(len(self.prompts), 2)
         self.assertIn("rejected", self.prompts[1])
         self.assertEqual(len(result["recipes"]), RECIPE_COUNT)
 
-    def test_a_bad_second_answer_fails_closed(self):
+    async def test_a_bad_second_answer_fails_closed(self):
         self.answers(complete_answer(complete_recipe(steps=2)),
                      complete_answer(complete_recipe(steps=2)))
         with self.assertRaisesRegex(RuntimeError, "complete recipes"):
-            recipes.suggest_recipes(["dal"], "", Settings(_env_file=None))
+            await recipes.suggest_recipes(
+                ["dal"], "", Settings(_env_file=None), transport=None
+            )
         self.assertEqual(len(self.prompts), 2)
 
 

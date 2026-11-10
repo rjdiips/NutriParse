@@ -1,9 +1,10 @@
 """Shared FastAPI dependencies and route-level guards."""
 
+import asyncio
 import json
 import time
 import uuid
-from typing import Callable
+from typing import Awaitable, Callable
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
@@ -12,6 +13,7 @@ from ..config import MAX_REQUEST_BYTES, ConfigurationError, Settings
 from ..journal import store
 from ..logging_config import LOGGER
 from ..services.llm import LLMRequestError
+from ..services.transport import ProviderTransport
 
 
 async def json_body(request: Request):
@@ -74,6 +76,49 @@ def current_settings(request: Request) -> Settings:
         ) from error
 
 
+def http_transport(request: Request) -> ProviderTransport:
+    """Return the shared client created by the application lifespan."""
+    return request.app.state.transport
+
+
+async def _watch_for_disconnect(request: Request):
+    """Wait for the ASGI disconnect message that follows a closed request."""
+    while True:
+        message = await request.receive()
+        if message.get("type") == "http.disconnect":
+            return
+
+
+async def cancel_on_disconnect(request: Request, operation: Callable[[], Awaitable]):
+    """Await one upstream call and cancel it when the browser goes away.
+
+    Cancelling the coroutine also closes the in-flight ``httpx`` request, so a
+    closed tab stops the provider or image generator instead of letting it run
+    to completion. The request body must already be read; the watcher then only
+    drains disconnect messages. The response is never seen; 499 records why.
+    """
+    task = asyncio.create_task(operation())
+    watcher = asyncio.create_task(_watch_for_disconnect(request))
+    try:
+        done, _ = await asyncio.wait(
+            {task, watcher}, return_when=asyncio.FIRST_COMPLETED
+        )
+        if task in done:
+            return task.result()
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        raise HTTPException(499, "Client closed request")
+    finally:
+        watcher.cancel()
+        try:
+            await watcher
+        except asyncio.CancelledError:
+            pass
+
+
 def write_journal(request, operation, missing_is_404=False):
     try:
         document = operation()
@@ -91,7 +136,8 @@ def write_journal(request, operation, missing_is_404=False):
     return document
 
 
-def run_ai_feature(feature, operation: Callable[[], dict], settings: Settings):
+async def run_ai_feature(feature, operation: Callable[[], Awaitable[dict]],
+                         settings: Settings, request: Request):
     """Run one model-backed feature with the same structured logging as before."""
     request_id = uuid.uuid4().hex[:12]
     started = time.monotonic()
@@ -102,7 +148,10 @@ def run_ai_feature(feature, operation: Callable[[], dict], settings: Settings):
         request_id, feature, llm.provider, llm.model,
     )
     try:
-        result = operation()
+        result = await cancel_on_disconnect(request, operation)
+    except HTTPException:
+        # A disconnected client is not an AI failure; let its status through.
+        raise
     except RuntimeError as error:
         LOGGER.warning(
             "event=llm_call_failed request_id=%s feature=%s duration_ms=%d error=%s%s",

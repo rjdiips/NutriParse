@@ -3,11 +3,12 @@
 import json
 import math
 import time
-import urllib.error
-import urllib.request
 from urllib.parse import urlsplit
 
+import httpx
+
 from ..config import HOST, PORT, Settings
+from .transport import ProviderTransport
 
 
 class LLMRequestError(RuntimeError):
@@ -28,8 +29,22 @@ def safe_error_excerpt(raw, secrets=()):
     return excerpt[:1200]
 
 
-def chat_completion(prompt, system_prompt, settings: Settings, temperature,
-                    default_timeout, invalid_json_message, meta=None):
+def _endpoint(base_url):
+    """Provider URL with any query string or fragment left out of the log."""
+    endpoint = urlsplit(base_url)
+    return f"{endpoint.scheme}://{endpoint.netloc}{endpoint.path}"
+
+
+async def chat_completion(
+    prompt,
+    system_prompt,
+    settings: Settings,
+    temperature,
+    default_timeout,
+    invalid_json_message,
+    transport: ProviderTransport,
+    meta=None,
+):
     """Call the configured OpenAI-compatible chat endpoint and parse JSON.
 
     When ``meta`` is a dict, it is filled with provider, model, latency, and
@@ -40,7 +55,7 @@ def chat_completion(prompt, system_prompt, settings: Settings, temperature,
     if config.provider == "openrouter" and not config.api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not configured")
 
-    payload = {
+    request_payload = {
         "model": config.model,
         "messages": [
             {"role": "system", "content": system_prompt},
@@ -52,10 +67,9 @@ def chat_completion(prompt, system_prompt, settings: Settings, temperature,
         # Thinking models can spend thousands of tokens before emitting any
         # content; "none" keeps replies fast and non-empty.
         if settings.llm_reasoning_effort:
-            payload["reasoning_effort"] = settings.llm_reasoning_effort
+            request_payload["reasoning_effort"] = settings.llm_reasoning_effort
         if settings.llm_json_mode:
-            payload["response_format"] = {"type": "json_object"}
-    body = json.dumps(payload).encode("utf-8")
+            request_payload["response_format"] = {"type": "json_object"}
     headers = {
         "Content-Type": "application/json",
         "HTTP-Referer": f"http://{HOST}:{PORT}/",
@@ -63,34 +77,39 @@ def chat_completion(prompt, system_prompt, settings: Settings, temperature,
     }
     if config.api_key:
         headers["Authorization"] = f"Bearer {config.api_key}"
-    request = urllib.request.Request(
-        f"{config.base_url}/chat/completions", data=body, headers=headers, method="POST"
-    )
 
     label = config.label
     try:
-        with urllib.request.urlopen(request, timeout=config.timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        # Keep provider details out of the browser response, but retain enough
-        # sanitized context in the server log to diagnose upstream failures.
-        response_body = exc.read(4096)
-        endpoint = urlsplit(config.base_url)
-        diagnostic = (
-            f"provider={config.provider} model={config.model} "
-            f"endpoint={endpoint.scheme}://{endpoint.netloc}{endpoint.path} "
-            f"upstream_status={exc.code} response={safe_error_excerpt(response_body, (config.api_key, prompt, system_prompt))}"
+        response = await transport.post_llm(
+            f"{config.base_url}/chat/completions",
+            json=request_payload,
+            headers=headers,
+            timeout=config.timeout,
         )
-        raise LLMRequestError(f"{label} returned HTTP {exc.code}", diagnostic) from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        reason = str(getattr(exc, "reason", exc)).replace("\r", " ").replace("\n", " ")[:240]
-        endpoint = urlsplit(config.base_url)
+    except httpx.RequestError as exc:
+        reason = str(exc).replace("\r", " ").replace("\n", " ")[:240]
         diagnostic = (
             f"provider={config.provider} model={config.model} "
-            f"endpoint={endpoint.scheme}://{endpoint.netloc}{endpoint.path} "
+            f"endpoint={_endpoint(config.base_url)} "
             f"transport_error={type(exc).__name__} reason={reason}"
         )
         raise LLMRequestError(f"Could not reach {label}", diagnostic) from exc
+
+    if response.status_code >= 400:
+        # Keep provider details out of the browser response, but retain enough
+        # sanitized context in the server log to diagnose upstream failures.
+        diagnostic = (
+            f"provider={config.provider} model={config.model} "
+            f"endpoint={_endpoint(config.base_url)} "
+            f"upstream_status={response.status_code} "
+            f"response={safe_error_excerpt(response.content[:4096], (config.api_key, prompt, system_prompt))}"
+        )
+        raise LLMRequestError(
+            f"{label} returned HTTP {response.status_code}", diagnostic
+        )
+
+    try:
+        payload = json.loads(response.content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"{label} returned an invalid response") from exc
 

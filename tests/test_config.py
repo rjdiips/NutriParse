@@ -24,6 +24,7 @@ try:
         DEFAULT_OPENROUTER_BASE_URL,
         DEFAULT_OPENROUTER_MODEL,
         DEFAULT_PARSE_TIMEOUT,
+        IMAGE_TIMEOUT,
         ConfigurationError,
         Settings,
         SettingsProvider,
@@ -86,6 +87,7 @@ class TestSettingsDefaults(unittest.TestCase):
         self.assertTrue(settings.llm_json_mode)
         self.assertEqual(settings.local_image_api_url, DEFAULT_IMAGE_API_URL)
         self.assertTrue(settings.local_image_generation_enabled)
+        self.assertEqual(settings.local_image_timeout, IMAGE_TIMEOUT)
         self.assertEqual(settings.local_image_width, DEFAULT_IMAGE_WIDTH)
         self.assertEqual(settings.local_image_height, DEFAULT_IMAGE_HEIGHT)
         self.assertEqual(settings.local_image_steps, DEFAULT_IMAGE_STEPS)
@@ -147,6 +149,7 @@ class TestSettingsPrecedence(unittest.TestCase):
             "openrouter_base_url": "http://file-openrouter:2/v1",
             "local_image_api_url": "http://file-image:3/txt2img",
             "local_image_generation_enabled": False,
+            "local_image_timeout": 45,
             "local_image_width": 111,
             "local_image_height": 222,
             "local_image_steps": 7,
@@ -164,6 +167,7 @@ class TestSettingsPrecedence(unittest.TestCase):
             "OPENROUTER_BASE_URL": "http://env-openrouter:2/v1",
             "LOCAL_IMAGE_API_URL": "http://env-image:3/txt2img",
             "LOCAL_IMAGE_GENERATION_ENABLED": "true",
+            "LOCAL_IMAGE_TIMEOUT": "60",
             "LOCAL_IMAGE_WIDTH": "333",
             "LOCAL_IMAGE_HEIGHT": "444",
             "LOCAL_IMAGE_STEPS": "9",
@@ -185,6 +189,7 @@ class TestSettingsPrecedence(unittest.TestCase):
         self.assertEqual(settings.openrouter_base_url, "http://env-openrouter:2/v1")
         self.assertEqual(settings.local_image_api_url, "http://env-image:3/txt2img")
         self.assertTrue(settings.local_image_generation_enabled)
+        self.assertEqual(settings.local_image_timeout, 60)
         self.assertEqual(settings.local_image_width, 333)
         self.assertEqual(settings.local_image_height, 444)
         self.assertEqual(settings.local_image_steps, 9)
@@ -283,6 +288,7 @@ class TestValidation(unittest.TestCase):
             "local_image_width": "wide",
             "local_image_height": 4096,
             "local_image_steps": 0,
+            "local_image_timeout": 0,
             "llm_json_mode": "maybe",
         }
         for field, value in cases.items():

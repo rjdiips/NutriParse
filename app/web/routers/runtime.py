@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends
 from ...config import (
     DEFAULT_COOK_TIMEOUT,
     DEFAULT_PARSE_TIMEOUT,
-    IMAGE_TIMEOUT,
     Settings,
 )
 from ..dependencies import current_settings
@@ -35,5 +34,5 @@ def config(settings: Settings = Depends(current_settings)):
         "model": parse.model,
         "parse_timeout_ms": _milliseconds(parse.timeout),
         "cook_timeout_ms": _milliseconds(cook.timeout),
-        "image_timeout_ms": _milliseconds(IMAGE_TIMEOUT),
+        "image_timeout_ms": _milliseconds(settings.local_image_timeout),
     }

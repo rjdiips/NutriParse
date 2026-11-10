@@ -3,12 +3,13 @@
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...config import Settings
 from ...logging_config import IMAGE_LOGGER
 from ...services.images import generate_local_recipe_image
-from ..dependencies import current_settings, json_body
+from ...services.transport import ProviderTransport
+from ..dependencies import cancel_on_disconnect, current_settings, http_transport, json_body
 from ..schemas import ApiError, ImageRequest, ImageResponse
 
 router = APIRouter(prefix="/api", tags=["images"])
@@ -21,9 +22,11 @@ router = APIRouter(prefix="/api", tags=["images"])
                415: {"model": ApiError}, 503: {"model": ApiError}},
     dependencies=[Depends(json_body)],
 )
-def recipe_image(
+async def recipe_image(
+    request: Request,
     payload: ImageRequest,
     settings: Settings = Depends(current_settings),
+    transport: ProviderTransport = Depends(http_transport),
 ):
     title = payload.title
     description = payload.description
@@ -53,7 +56,15 @@ def recipe_image(
         settings.local_image_steps,
     )
     try:
-        image = generate_local_recipe_image(recipe, local_image_url, settings)
+        image = await cancel_on_disconnect(
+            request,
+            lambda: generate_local_recipe_image(
+                recipe, local_image_url, settings, transport
+            ),
+        )
+    except HTTPException:
+        # A disconnected client is not an image failure; let its status through.
+        raise
     except RuntimeError as error:
         IMAGE_LOGGER.warning(
             "event=image_generation_failed request_id=%s duration_ms=%d error=%r",
